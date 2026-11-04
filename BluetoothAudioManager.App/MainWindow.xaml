@@ -15,6 +15,7 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Artwork.xaml" />
+                <ResourceDictionary Source="Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <Style x:Key="CaptionButton" TargetType="Button">
                 <Setter Property="Width" Value="46" />
@@ -38,25 +39,12 @@
                     </Trigger>
                 </Style.Triggers>
             </Style>
-            <Style x:Key="SwitchStyle" TargetType="ToggleButton">
-                <Setter Property="Width" Value="40" />
-                <Setter Property="Height" Value="20" />
+            <Style x:Key="ResizeEdge" TargetType="Thumb">
+                <Setter Property="Cursor" Value="SizeNS" />
                 <Setter Property="Template">
                     <Setter.Value>
-                        <ControlTemplate TargetType="ToggleButton">
-                            <Border x:Name="Track" CornerRadius="10" BorderThickness="1" Background="Transparent"
-                                    BorderBrush="{DynamicResource TextFillColorSecondaryBrush}">
-                                <Ellipse x:Name="Knob" Width="12" Height="12" Margin="3,0" HorizontalAlignment="Left"
-                                         VerticalAlignment="Center" Fill="{DynamicResource TextFillColorSecondaryBrush}" />
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="Track" Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
-                                    <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
-                                    <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
-                                    <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
-                                </Trigger>
-                            </ControlTemplate.Triggers>
+                        <ControlTemplate TargetType="Thumb">
+                            <Border Background="Transparent" />
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
@@ -109,21 +97,24 @@
                         <ColumnDefinition Width="130" />
                     </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <Image Source="{StaticResource PodImage}" Width="72" Height="96" Margin="0,0,0,8"
-                               ToolTip="Right pod" AutomationProperties.Name="Right pod" />
-                        <local:BatteryBadge x:Name="RightBattery" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1">
-                        <Image Source="{StaticResource PodImage}" Width="72" Height="96" Margin="0,0,0,8"
-                               ToolTip="Left pod" AutomationProperties.Name="Left pod" RenderTransformOrigin="0.5,0.5">
+                        <Image Source="Assets/AirPodsPod.png" Height="96" Margin="0,0,0,8" Stretch="Uniform"
+                               RenderOptions.BitmapScalingMode="HighQuality" RenderTransformOrigin="0.5,0.5"
+                               ToolTip="Right pod" AutomationProperties.Name="Right pod">
                             <Image.RenderTransform>
                                 <ScaleTransform ScaleX="-1" />
                             </Image.RenderTransform>
                         </Image>
-                        <local:BatteryBadge x:Name="LeftBattery" />
+                        <local:BatteryBadge x:Name="RightBattery" Label="R" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <Image Source="Assets/AirPodsPod.png" Height="96" Margin="0,0,0,8" Stretch="Uniform"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               ToolTip="Left pod" AutomationProperties.Name="Left pod" />
+                        <local:BatteryBadge x:Name="LeftBattery" Label="L" />
                     </StackPanel>
                     <StackPanel Grid.Column="3">
-                        <Image Source="{StaticResource CaseImage}" Width="118" Height="84" Margin="0,6,0,14"
+                        <Image Source="Assets/AirPodsCase.png" Height="96" Margin="0,0,0,8" Stretch="Uniform"
+                               RenderOptions.BitmapScalingMode="HighQuality"
                                ToolTip="Case" AutomationProperties.Name="Case" />
                         <local:BatteryBadge x:Name="CaseBattery" />
                     </StackPanel>
@@ -148,42 +139,18 @@
                                       VerticalAlignment="Center" Click="EarDetectionToggle_Click"
                                       AutomationProperties.Name="Ear detection" />
                     </Grid>
-                    <Grid Margin="0,9,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="Low battery notification" FontSize="14" />
-                            <TextBlock Text="Alert when a battery runs low" FontSize="12" Margin="0,2,0,0"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
-                        <TextBlock x:Name="LowBatteryText" Grid.Column="1" Text="Off" FontSize="12" Margin="0,0,8,0"
-                                   VerticalAlignment="Center" />
-                        <ToggleButton x:Name="LowBatteryToggle" Grid.Column="2" Style="{StaticResource SwitchStyle}"
-                                      VerticalAlignment="Center" Click="LowBatteryToggle_Click"
-                                      AutomationProperties.Name="Low battery notification" />
-                    </Grid>
-                    <Grid x:Name="LowBatteryLevelRow">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="36" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Alert at" FontSize="12" Margin="0,0,10,0" VerticalAlignment="Center" />
-                        <Slider x:Name="LowBatteryLevelSlider" Grid.Column="1" Minimum="10" Maximum="50"
-                                TickFrequency="10" IsSnapToTickEnabled="True" VerticalAlignment="Center"
-                                PreviewMouseWheel="LowBatteryLevelSlider_PreviewMouseWheel"
-                                AutomationProperties.Name="Low battery level" />
-                        <TextBlock x:Name="LowBatteryLevelText" Grid.Column="2" FontSize="12" TextAlignment="Right"
-                                   VerticalAlignment="Center" />
-                    </Grid>
+                    <local:LowBatterySetting x:Name="AirPodsLowBattery" Margin="0,9,0,0" />
                 </StackPanel>
 
             </StackPanel>
             </StackPanel>
             </ScrollViewer>
+
+            <!-- The window has no Windows border to drag, so these edges resize it. The top one stops short of the X button. -->
+            <Thumb Grid.RowSpan="2" Style="{StaticResource ResizeEdge}" Height="5" VerticalAlignment="Top" Margin="0,0,46,0"
+                   DragDelta="TopEdge_DragDelta" DragCompleted="ResizeEdge_DragCompleted" />
+            <Thumb Grid.RowSpan="2" Style="{StaticResource ResizeEdge}" Height="5" VerticalAlignment="Bottom"
+                   DragDelta="BottomEdge_DragDelta" DragCompleted="ResizeEdge_DragCompleted" />
         </Grid>
     </Border>
 </Window>

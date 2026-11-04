@@ -62,6 +62,15 @@ public class LowBatteryWatcherTests
     }
 
     [Fact]
+    public void UpdatePart_AlertsOnceForASingleDevice()
+    {
+        var watcher = new LowBatteryWatcher();
+
+        Assert.Equal("Headset is at 20%", watcher.UpdatePart("Headset", new(20, false), 20));
+        Assert.Null(watcher.UpdatePart("Headset", new(15, false), 20));
+    }
+
+    [Fact]
     public void Reset_AllowsANewAlert()
     {
         var watcher = new LowBatteryWatcher();

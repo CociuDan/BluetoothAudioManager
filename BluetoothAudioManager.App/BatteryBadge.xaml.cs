@@ -18,6 +18,9 @@ public partial class BatteryBadge : UserControl
         InitializeComponent();
     }
 
+    /// <summary>Text shown before the level, for when one picture covers several batteries.</summary>
+    public string? Label { get; set; }
+
     public void Show(TrackedBattery battery, DateTimeOffset now)
     {
         if (battery.PercentAt(now) is not { } percent)
@@ -36,7 +39,7 @@ public partial class BatteryBadge : UserControl
             _ => LowBrush,
         };
         PercentText.Foreground = text;
-        PercentText.Text = $"{percent}%";
+        PercentText.Text = Label is null ? $"{percent}%" : $"{Label} {percent}%";
         ChargingIcon.Fill = text;
         ChargingIcon.Visibility = battery.IsChargingAt(now) ? Visibility.Visible : Visibility.Collapsed;
         Badge.Visibility = Visibility.Visible;

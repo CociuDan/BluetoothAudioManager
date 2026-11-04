@@ -1,7 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using BluetoothAudioManager.Core;
 
@@ -17,7 +19,7 @@ public partial class MainWindow : Window
     private const double TitleBarHeight = 32;
     private const double WindowEdges = 2;
     private const double NoDevicesHeight = 240;
-    private const int MaximumRowsWithoutScrolling = 2;
+    private const int DefaultVisibleRows = 2;
 
     private readonly AirPodsMonitor _monitor = new();
     private readonly DeviceConnectionMonitor _airPodsConnection = new(PairedAudioDevices.AirPodsName);
@@ -37,14 +39,16 @@ public partial class MainWindow : Window
     private DateTimeOffset _lastDeviceCheck;
     private bool _refreshingDevices;
     private bool _devicesShownOnce;
+    private double _smallestHeight;
+    private double _allDevicesHeight;
     private DateTimeOffset _lastHiddenByClickAway;
     private bool _closeAllowed;
 
     private bool CanShowBattery =>
         AirPodsHeader.State is not (null or DeviceConnectionState.Disconnected);
 
-    /// <summary>Raised with the message to show when a battery runs low.</summary>
-    public event Action<string>? LowBatteryAlert;
+    /// <summary>Raised with the title and message to show when a battery runs low.</summary>
+    public event Action<string, string>? LowBatteryAlert;
 
     public MainWindow()
     {
@@ -71,14 +75,12 @@ public partial class MainWindow : Window
             if (e.NewValue is false)
             {
                 ShowSettings(false);
+                _otherRows.ForEach(row => row.ShowSettings(false));
             }
         };
         ShowEarDetectionSetting();
-        LowBatteryLevelSlider.Value = _settings.LowBatteryLevel;
-        ShowLowBatterySetting();
-
-        // Added after the saved level is shown, so showing it doesn't count as a change.
-        LowBatteryLevelSlider.ValueChanged += (_, e) => OnLowBatteryLevelChanged((int)e.NewValue);
+        AirPodsLowBattery.Show(_settings.LowBatteryEnabled, _settings.LowBatteryLevel);
+        AirPodsLowBattery.Changed += OnAirPodsLowBatteryChanged;
 
         Deactivated += (_, _) => OnClickedAway();
         Closing += (_, e) =>
@@ -150,7 +152,13 @@ public partial class MainWindow : Window
 
         foreach (var name in otherNames.Where(name => _otherRows.All(row => row.DeviceName != name)))
         {
-            var row = new HeadphoneRow(name, TitleFor(name), PictureFor(name));
+            var row = new HeadphoneRow(name, TitleFor(name), PictureFor(name), _settings);
+            row.LowBatteryAlert += (title, message) => LowBatteryAlert?.Invoke(title, message);
+            row.HeightChanged += () =>
+            {
+                SizeToDevices();
+                PositionInCorner();
+            };
             _otherRows.Add(row);
             DevicesPanel.Children.Add(row);
         }
@@ -171,7 +179,9 @@ public partial class MainWindow : Window
         IsMajorIV(deviceName) ? "Marshall Major IV" : deviceName;
 
     private ImageSource PictureFor(string deviceName) =>
-        (ImageSource)FindResource(IsMajorIV(deviceName) ? "HeadphonesImage" : "GenericHeadphonesImage");
+        IsMajorIV(deviceName)
+            ? new BitmapImage(new Uri("pack://application:,,,/Assets/MajorIV.png"))
+            : (ImageSource)FindResource("GenericHeadphonesImage");
 
     private static bool IsMajorIV(string deviceName) =>
         deviceName.Contains("MAJOR IV", StringComparison.OrdinalIgnoreCase);
@@ -217,24 +227,57 @@ public partial class MainWindow : Window
 
     private void SizeToDevices()
     {
+        double defaultHeight;
+
         if (NoDevicesPanel.Visibility == Visibility.Visible)
         {
-            Height = NoDevicesHeight;
-            return;
+            _smallestHeight = _allDevicesHeight = defaultHeight = NoDevicesHeight;
+        }
+        else
+        {
+            DevicesPanel.Measure(new Size(Width - WindowEdges, double.PositiveInfinity));
+
+            var rows = DevicesPanel.Children.Cast<UIElement>().Where(row => row.Visibility == Visibility.Visible).ToList();
+
+            double HeightOfRows(int count) => Math.Ceiling(
+                rows.Take(count).Sum(row => row.DesiredSize.Height)
+                + DevicesPanel.Margin.Top + DevicesPanel.Margin.Bottom + TitleBarHeight + WindowEdges);
+
+            _smallestHeight = HeightOfRows(1);
+            _allDevicesHeight = HeightOfRows(rows.Count);
+            defaultHeight = HeightOfRows(DefaultVisibleRows);
         }
 
-        DevicesPanel.Measure(new Size(Width - WindowEdges, double.PositiveInfinity));
+        ResizeTo(_settings.WindowHeight ?? defaultHeight);
+    }
 
-        var rows = DevicesPanel.Children.Cast<UIElement>().Where(row => row.Visibility == Visibility.Visible).ToList();
-        var needsScrolling = rows.Count > MaximumRowsWithoutScrolling;
-        var contentHeight = needsScrolling
-            ? rows.Take(MaximumRowsWithoutScrolling).Sum(row => row.DesiredSize.Height) + DevicesPanel.Margin.Top + DevicesPanel.Margin.Bottom
-            : DevicesPanel.DesiredSize.Height;
+    private void ResizeTo(double height)
+    {
+        var screenLimit = SystemParameters.WorkArea.Height - 2 * CornerGap;
+        var largest = Math.Max(_smallestHeight, Math.Min(_allDevicesHeight, screenLimit));
 
-        // Scrolling is either always available or never, because a scrollbar that
-        // comes and goes changes the width of the rows and shifts their buttons.
-        DevicesScroller.VerticalScrollBarVisibility = needsScrolling ? ScrollBarVisibility.Visible : ScrollBarVisibility.Disabled;
-        Height = Math.Ceiling(contentHeight + TitleBarHeight + WindowEdges);
+        Height = Math.Clamp(height, _smallestHeight, largest);
+
+        // Only shown when something doesn't fit, which the user can choose by making the window smaller.
+        DevicesScroller.VerticalScrollBarVisibility = Height < _allDevicesHeight
+            ? ScrollBarVisibility.Visible
+            : ScrollBarVisibility.Disabled;
+    }
+
+    private void TopEdge_DragDelta(object sender, DragDeltaEventArgs e)
+    {
+        // Keeps the bottom edge where it is, as the window sits on the taskbar.
+        var bottom = Top + Height;
+        ResizeTo(Height - e.VerticalChange);
+        Top = bottom - Height;
+    }
+
+    private void BottomEdge_DragDelta(object sender, DragDeltaEventArgs e) => ResizeTo(Height + e.VerticalChange);
+
+    private void ResizeEdge_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        _settings.WindowHeight = Height;
+        _settings.Save();
     }
 
     private void ToggleSettings() => ShowSettings(SettingsPanel.Visibility != Visibility.Visible);
@@ -261,37 +304,12 @@ public partial class MainWindow : Window
         EarDetectionText.Text = _settings.EarDetectionEnabled ? "On" : "Off";
     }
 
-    private void LowBatteryToggle_Click(object sender, RoutedEventArgs e)
+    private void OnAirPodsLowBatteryChanged(bool enabled, int level)
     {
-        _settings.LowBatteryEnabled = LowBatteryToggle.IsChecked == true;
-        _settings.Save();
-        _lowBatteryWatcher.Reset();
-        ShowLowBatterySetting();
-    }
-
-    private void LowBatteryLevelSlider_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-    {
-        LowBatteryLevelSlider.Value += Math.Sign(e.Delta) * LowBatteryLevelSlider.TickFrequency;
-        e.Handled = true;
-    }
-
-    private void OnLowBatteryLevelChanged(int level)
-    {
+        _settings.LowBatteryEnabled = enabled;
         _settings.LowBatteryLevel = level;
         _settings.Save();
         _lowBatteryWatcher.Reset();
-        ShowLowBatterySetting();
-    }
-
-    private void ShowLowBatterySetting()
-    {
-        var enabled = _settings.LowBatteryEnabled;
-
-        LowBatteryToggle.IsChecked = enabled;
-        LowBatteryText.Text = enabled ? "On" : "Off";
-        LowBatteryLevelText.Text = $"{(int)LowBatteryLevelSlider.Value}%";
-        LowBatteryLevelSlider.IsEnabled = enabled;
-        LowBatteryLevelRow.Opacity = enabled ? 1 : 0.5;
     }
 
     private void ApplyLowBatteryAlerts(AirPodsStatus status)
@@ -304,7 +322,7 @@ public partial class MainWindow : Window
         var alerts = _lowBatteryWatcher.Update(status, _settings.LowBatteryLevel);
         if (alerts.Count > 0)
         {
-            LowBatteryAlert?.Invoke(string.Join(Environment.NewLine, alerts));
+            LowBatteryAlert?.Invoke("AirPods battery low", string.Join(Environment.NewLine, alerts));
         }
     }
 

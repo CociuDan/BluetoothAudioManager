@@ -1,0 +1,40 @@
+<UserControl x:Class="BluetoothAudioManager.App.LowBatterySetting"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary Source="Styles.xaml" />
+    </UserControl.Resources>
+    <StackPanel>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="Low battery notification" FontSize="14" />
+                <TextBlock Text="Alert when a battery runs low" FontSize="12" Margin="0,2,0,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+            <TextBlock x:Name="StateText" Grid.Column="1" Text="Off" FontSize="12" Margin="0,0,8,0"
+                       VerticalAlignment="Center" />
+            <ToggleButton x:Name="Toggle" Grid.Column="2" Style="{StaticResource SwitchStyle}"
+                          VerticalAlignment="Center" Click="Toggle_Click"
+                          AutomationProperties.Name="Low battery notification" />
+        </Grid>
+        <Grid x:Name="LevelRow">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="36" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Alert at" FontSize="12" Margin="0,0,10,0" VerticalAlignment="Center" />
+            <Slider x:Name="LevelSlider" Grid.Column="1" Minimum="10" Maximum="50"
+                    TickFrequency="10" IsSnapToTickEnabled="True" VerticalAlignment="Center"
+                    PreviewMouseWheel="LevelSlider_PreviewMouseWheel"
+                    AutomationProperties.Name="Low battery level" />
+            <TextBlock x:Name="LevelText" Grid.Column="2" FontSize="12" TextAlignment="Right"
+                       VerticalAlignment="Center" />
+        </Grid>
+    </StackPanel>
+</UserControl>

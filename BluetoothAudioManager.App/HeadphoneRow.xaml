@@ -6,7 +6,11 @@
         <Border x:Name="Divider" Height="1" Margin="0,12" Visibility="Collapsed"
                 Background="{DynamicResource DividerStrokeColorDefaultBrush}" />
         <local:DeviceHeader x:Name="Header" />
-        <Image x:Name="Picture" Width="96" Height="96" HorizontalAlignment="Left"
-               ToolTip="Headphones" AutomationProperties.Name="Headphones" />
+        <StackPanel x:Name="PictureArea" Width="96" HorizontalAlignment="Left">
+            <Image x:Name="Picture" Width="96" Height="96"
+                   ToolTip="Headphones" AutomationProperties.Name="Headphones" />
+            <local:BatteryBadge x:Name="Badge" Margin="0,8,0,0" Visibility="Collapsed" />
+        </StackPanel>
+        <local:LowBatterySetting x:Name="BatterySetting" Height="130" Visibility="Collapsed" />
     </StackPanel>
 </UserControl>

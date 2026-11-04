@@ -30,7 +30,7 @@ public partial class App : Application
 
         _window = new MainWindow();
         _trayIcon = new TrayIcon(_window.Toggle, ExitApp);
-        _window.LowBatteryAlert += message => _trayIcon.ShowNotification("AirPods battery low", message);
+        _window.LowBatteryAlert += _trayIcon.ShowNotification;
         _window.StartMonitoring();
         _showRequestWait = ThreadPool.RegisterWaitForSingleObject(
             _showRequest,
