@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="BluetoothAudioManager.App/BluetoothAudioManager.App.csproj" />
+  <Project Path="BluetoothAudioManager.Core/BluetoothAudioManager.Core.csproj" />
+  <Project Path="BluetoothAudioManager.Tests/BluetoothAudioManager.Tests.csproj" />
+</Solution>

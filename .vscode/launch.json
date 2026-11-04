@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Bluetooth Audio Manager",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/BluetoothAudioManager.App/bin/Debug/net10.0-windows10.0.19041.0/BluetoothAudioManager.App.dll",
+            "cwd": "${workspaceFolder}/BluetoothAudioManager.App",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        }
+    ]
+}
