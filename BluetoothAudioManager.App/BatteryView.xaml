@@ -1,0 +1,19 @@
+<UserControl x:Class="BluetoothAudioManager.App.BatteryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel HorizontalAlignment="Center">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+            <Grid Width="30" Height="14" VerticalAlignment="Center">
+                <Border Width="27" HorizontalAlignment="Left" CornerRadius="3" BorderThickness="1.5" Padding="1.5"
+                        BorderBrush="{DynamicResource TextFillColorSecondaryBrush}">
+                    <Rectangle x:Name="LevelFill" HorizontalAlignment="Left" Width="0" RadiusX="1" RadiusY="1" />
+                </Border>
+                <Rectangle Width="2" Height="6" HorizontalAlignment="Right" RadiusX="1" RadiusY="1"
+                           Fill="{DynamicResource TextFillColorSecondaryBrush}" />
+            </Grid>
+            <TextBlock x:Name="PercentText" Margin="6,0,0,0" MinWidth="34" VerticalAlignment="Center" />
+        </StackPanel>
+        <TextBlock x:Name="DetailText" Margin="0,4,0,0" MinHeight="16" FontSize="11" TextAlignment="Center"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+    </StackPanel>
+</UserControl>

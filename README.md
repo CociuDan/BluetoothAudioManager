@@ -6,7 +6,7 @@ A Windows app that shows the battery of each AirPod and the case.
 
 The app listens for the Bluetooth LE messages AirPods broadcast, so it doesn't need a driver or a connection to the buds. Apple doesn't document this format, so a firmware update could break it.
 
-- Readings come in 10% steps.
+- Readings come in 10% steps. The battery icon is green above 20%, yellow from 10% to 20%, and red below 10%.
 - The case usually reports only with a pod inside and the lid open. While the AirPods are connected, the app keeps showing the last level each part reported and how long ago that was.
 - Broadcasts aren't tied to a paired device, so the app shows the strongest signal nearby. It could show someone else's AirPods if yours aren't broadcasting.
 - AirPods Max aren't supported.

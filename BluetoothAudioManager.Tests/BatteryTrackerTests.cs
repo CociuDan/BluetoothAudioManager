@@ -68,30 +68,30 @@ public class BatteryTrackerTests
     }
 
     [Theory]
-    [InlineData(0, "60%")]
-    [InlineData(15, "60%")]
-    [InlineData(16, "60%, 16 s ago")]
-    [InlineData(300, "60%, 5 min ago")]
-    [InlineData(7200, "60%, 2 h ago")]
-    public void Describe_ShowsAgeOnceStale(int seconds, string expected)
+    [InlineData(0, "")]
+    [InlineData(15, "")]
+    [InlineData(16, "16 s ago")]
+    [InlineData(300, "5 min ago")]
+    [InlineData(7200, "2 h ago")]
+    public void DescribeDetail_ShowsAgeOnceStale(int seconds, string expected)
     {
         var battery = new TrackedBattery(60, false, Start);
 
-        Assert.Equal(expected, battery.Describe(Start.AddSeconds(seconds)));
+        Assert.Equal(expected, battery.DescribeDetail(Start.AddSeconds(seconds)));
     }
 
     [Fact]
-    public void Describe_ShowsChargingOnlyWhileFresh()
+    public void DescribeDetail_ShowsChargingOnlyWhileFresh()
     {
         var battery = new TrackedBattery(60, true, Start);
 
-        Assert.Equal("60% charging", battery.Describe(Start.AddSeconds(1)));
-        Assert.Equal("60%, 1 min ago", battery.Describe(Start.AddMinutes(1)));
+        Assert.Equal("Charging", battery.DescribeDetail(Start.AddSeconds(1)));
+        Assert.Equal("1 min ago", battery.DescribeDetail(Start.AddMinutes(1)));
     }
 
     [Fact]
-    public void Describe_ExplainsMissingLevel()
+    public void DescribeDetail_ExplainsMissingLevel()
     {
-        Assert.Equal("Not reported yet", new TrackedBattery(null, false, null).Describe(Start));
+        Assert.Equal("Not reported yet", new TrackedBattery(null, false, null).DescribeDetail(Start));
     }
 }

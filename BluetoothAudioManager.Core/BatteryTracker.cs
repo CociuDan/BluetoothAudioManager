@@ -5,7 +5,8 @@ public sealed record TrackedBattery(int? Percent, bool IsCharging, DateTimeOffse
 {
     public static readonly TimeSpan FreshFor = TimeSpan.FromSeconds(15);
 
-    public string Describe(DateTimeOffset now)
+    /// <summary>The note shown under the level: its age once stale, or whether it's charging.</summary>
+    public string DescribeDetail(DateTimeOffset now)
     {
         if (Percent is null || ReportedAt is not { } reportedAt)
         {
@@ -15,10 +16,10 @@ public sealed record TrackedBattery(int? Percent, bool IsCharging, DateTimeOffse
         var age = now - reportedAt;
         if (age > FreshFor)
         {
-            return $"{Percent}%, {DescribeAge(age)}";
+            return DescribeAge(age);
         }
 
-        return IsCharging ? $"{Percent}% charging" : $"{Percent}%";
+        return IsCharging ? "Charging" : "";
     }
 
     public static string DescribeAge(TimeSpan age) =>

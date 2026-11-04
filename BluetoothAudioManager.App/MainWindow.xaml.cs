@@ -1,5 +1,4 @@
-﻿using System.Windows;
-using System.Windows.Controls;
+using System.Windows;
 using System.Windows.Threading;
 using BluetoothAudioManager.Core;
 
@@ -174,16 +173,16 @@ public partial class MainWindow : Window
         if (_tracker.Current is { } snapshot)
         {
             ModelText.Text = snapshot.Model;
-            ShowBattery(snapshot.Left, LeftBar, LeftText, now);
-            ShowBattery(snapshot.Right, RightBar, RightText, now);
-            ShowBattery(snapshot.Case, CaseBar, CaseText, now);
+            LeftBattery.Show(snapshot.Left, now);
+            RightBattery.Show(snapshot.Right, now);
+            CaseBattery.Show(snapshot.Case, now);
         }
         else
         {
             ModelText.Text = _connectionState == AirPodsConnectionState.Disconnected ? "AirPods" : "Looking for AirPods";
-            ClearBattery(LeftBar, LeftText);
-            ClearBattery(RightBar, RightText);
-            ClearBattery(CaseBar, CaseText);
+            LeftBattery.Clear();
+            RightBattery.Clear();
+            CaseBattery.Clear();
         }
 
         StatusText.Text = DescribeStatus(_tracker.Current, now);
@@ -210,17 +209,5 @@ public partial class MainWindow : Window
         return age > TrackedBattery.FreshFor
             ? $"Last heard {TrackedBattery.DescribeAge(age)}. Open the case to refresh."
             : "Live";
-    }
-
-    private static void ShowBattery(TrackedBattery battery, ProgressBar bar, TextBlock text, DateTimeOffset now)
-    {
-        bar.Value = battery.Percent ?? 0;
-        text.Text = battery.Describe(now);
-    }
-
-    private static void ClearBattery(ProgressBar bar, TextBlock text)
-    {
-        bar.Value = 0;
-        text.Text = "";
     }
 }
