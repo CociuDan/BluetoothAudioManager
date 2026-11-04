@@ -3,41 +3,26 @@ namespace BluetoothAudioManager.Core;
 /// <summary>A battery's latest known level. ReportedAt is null if it hasn't reported since the app started.</summary>
 public sealed record TrackedBattery(int? Percent, bool IsCharging, DateTimeOffset? ReportedAt)
 {
-    public static readonly TimeSpan FreshFor = TimeSpan.FromSeconds(15);
+    public static readonly TimeSpan LevelExpiresAfter = TimeSpan.FromMinutes(1);
+    public static readonly TimeSpan ChargingExpiresAfter = TimeSpan.FromSeconds(15);
 
-    /// <summary>The note shown under the level: its age once stale, or whether it's charging.</summary>
-    public string DescribeDetail(DateTimeOffset now)
-    {
-        if (Percent is null || ReportedAt is not { } reportedAt)
-        {
-            return "Not reported yet";
-        }
+    /// <summary>The level to show now, or null once it's too old to trust.</summary>
+    public int? PercentAt(DateTimeOffset now) =>
+        ReportedAt is { } reportedAt && now - reportedAt <= LevelExpiresAfter ? Percent : null;
 
-        var age = now - reportedAt;
-        if (age > FreshFor)
-        {
-            return DescribeAge(age);
-        }
-
-        return IsCharging ? "Charging" : "";
-    }
-
-    public static string DescribeAge(TimeSpan age) =>
-        age.TotalMinutes < 1 ? $"{(int)age.TotalSeconds} s ago"
-        : age.TotalHours < 1 ? $"{(int)age.TotalMinutes} min ago"
-        : $"{(int)age.TotalHours} h ago";
+    public bool IsChargingAt(DateTimeOffset now) =>
+        IsCharging && ReportedAt is { } reportedAt && now - reportedAt <= ChargingExpiresAfter;
 }
 
 public sealed record AirPodsSnapshot(
     string Model,
     TrackedBattery Left,
     TrackedBattery Right,
-    TrackedBattery Case,
-    DateTimeOffset UpdatedAt);
+    TrackedBattery Case);
 
 /// <summary>
-/// Keeps each battery's last reported level, because a part that isn't reporting,
-/// such as a case with no pods inside, still has the level it last sent.
+/// Keeps each battery's last reported level, because a part can briefly stop reporting,
+/// such as a case whose last pod was just taken out.
 /// </summary>
 public sealed class BatteryTracker
 {
@@ -54,8 +39,7 @@ public sealed class BatteryTracker
             status.Model,
             Merge(status.Left, previous?.Left, now),
             Merge(status.Right, previous?.Right, now),
-            Merge(status.Case, previous?.Case, now),
-            now);
+            Merge(status.Case, previous?.Case, now));
 
         return Current;
     }

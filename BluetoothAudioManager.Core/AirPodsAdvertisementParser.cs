@@ -20,7 +20,7 @@ public static class AirPodsAdvertisementParser
         [0x0F20] = "AirPods (2nd generation)",
         [0x1320] = "AirPods (3rd generation)",
         [0x1920] = "AirPods 4",
-        [0x1B20] = "AirPods 4 (ANC)",
+        [0x1B20] = "AirPods 4",
         [0x0E20] = "AirPods Pro",
         [0x1420] = "AirPods Pro (2nd generation)",
         [0x2420] = "AirPods Pro (2nd generation, USB-C)",
@@ -52,12 +52,16 @@ public static class AirPodsAdvertisementParser
         var charging = data[7] >> 4;
         var broadcasting = new BatteryReading(ToPercent(data[6] & 0x0F), (charging & 0b0001) != 0);
         var other = new BatteryReading(ToPercent(data[6] >> 4), (charging & 0b0010) != 0);
+        var broadcastingInEar = (data[5] & 0x02) != 0;
+        var otherInEar = (data[5] & 0x08) != 0;
 
         return new AirPodsStatus(
             Models.GetValueOrDefault(modelId, $"AirPods (model 0x{modelId:X4})"),
             leftIsBroadcasting ? broadcasting : other,
             leftIsBroadcasting ? other : broadcasting,
-            new BatteryReading(ToPercent(data[7] & 0x0F), (charging & 0b0100) != 0));
+            new BatteryReading(ToPercent(data[7] & 0x0F), (charging & 0b0100) != 0),
+            leftIsBroadcasting ? broadcastingInEar : otherInEar,
+            leftIsBroadcasting ? otherInEar : broadcastingInEar);
     }
 
     // The value 15 means not reporting.

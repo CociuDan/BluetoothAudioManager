@@ -4,67 +4,186 @@
         xmlns:local="clr-namespace:BluetoothAudioManager.App"
         Title="Bluetooth Audio Manager"
         Width="420"
-        SizeToContent="Height"
-        ResizeMode="CanMinimize"
-        WindowStartupLocation="CenterScreen">
+        Height="456"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        WindowStartupLocation="Manual">
     <Window.Resources>
-        <Style x:Key="PartIcon" TargetType="Path">
-            <Setter Property="Width" Value="32" />
-            <Setter Property="Height" Value="32" />
-            <Setter Property="Margin" Value="0,0,0,8" />
-            <Setter Property="Stretch" Value="Uniform" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
-            <Setter Property="Fill" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-        </Style>
-        <Geometry x:Key="PodGeometry">F1 M3.5,7 A5.5,5.5 0 1 1 14.5,7 A5.5,5.5 0 1 1 3.5,7 Z M11,7 H14.5 V20.5 A1.75,1.75 0 0 1 11,20.5 Z</Geometry>
-        <Geometry x:Key="CaseGeometry">F1 M3,10 V9 A4,4 0 0 1 7,5 H17 A4,4 0 0 1 21,9 V10 Z M3,11 H21 V15 A4,4 0 0 1 17,19 H7 A4,4 0 0 1 3,15 Z</Geometry>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Artwork.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="CaptionButton" TargetType="Button">
+                <Setter Property="Width" Value="46" />
+                <Setter Property="Height" Value="32" />
+                <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
+                <Setter Property="FontSize" Value="10" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#33808080" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            <Style x:Key="SwitchStyle" TargetType="ToggleButton">
+                <Setter Property="Width" Value="40" />
+                <Setter Property="Height" Value="20" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="Track" CornerRadius="10" BorderThickness="1" Background="Transparent"
+                                    BorderBrush="{DynamicResource TextFillColorSecondaryBrush}">
+                                <Ellipse x:Name="Knob" Width="12" Height="12" Margin="3,0" HorizontalAlignment="Left"
+                                         VerticalAlignment="Center" Fill="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Track" Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                    <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                    <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+                                    <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="CloseCaptionButton" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#E81123" />
+                        <Setter Property="Foreground" Value="White" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+        </ResourceDictionary>
     </Window.Resources>
-    <StackPanel Margin="20">
+    <Border x:Name="Surface" CornerRadius="8" BorderThickness="1">
         <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <TextBlock x:Name="ModelText" Text="Looking for AirPods" FontSize="18" FontWeight="SemiBold"
-                       TextWrapping="Wrap" VerticalAlignment="Center" />
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
-                <Button x:Name="ConnectButton" Content="Connect" Click="ConnectButton_Click" IsEnabled="False"
-                        MinWidth="100" Padding="16,4" />
-                <Button x:Name="ReconnectButton" Content="&#xE895;" Click="ReconnectButton_Click" IsEnabled="False"
-                        FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"
-                        MinWidth="0" Width="36" Margin="8,0,0,0" Padding="0" VerticalAlignment="Stretch"
-                        ToolTip="Reconnect" ToolTipService.ShowOnDisabled="True"
-                        AutomationProperties.Name="Reconnect" />
+            <Grid.RowDefinitions>
+                <RowDefinition Height="32" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid Background="Transparent" MouseLeftButtonDown="CaptionBar_MouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Bluetooth Audio Manager" Margin="30,0,0,0" FontSize="12" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Style="{StaticResource CloseCaptionButton}" Content="&#xE8BB;"
+                        Click="CloseButton_Click" ToolTip="Hide" AutomationProperties.Name="Hide" />
+            </Grid>
+
+            <StackPanel x:Name="NoDevicesPanel" Grid.Row="1" Margin="30,40,20,20" Visibility="Collapsed">
+                <TextBlock Text="No paired headphones found" FontSize="16" FontWeight="SemiBold" TextAlignment="Center" />
+                <TextBlock Text="Pair them in Windows' Bluetooth settings and they'll appear here." FontSize="12"
+                           Margin="0,4,0,0" TextAlignment="Center" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </StackPanel>
+
+            <ScrollViewer x:Name="DevicesScroller" Grid.Row="1" VerticalScrollBarVisibility="Disabled">
+            <StackPanel x:Name="DevicesPanel" Margin="30,20,20,20">
+            <StackPanel x:Name="AirPodsSection" Visibility="Collapsed">
+                <Border x:Name="AirPodsDivider" Height="1" Margin="0,12" Visibility="Collapsed"
+                        Background="{DynamicResource DividerStrokeColorDefaultBrush}" />
+                <local:DeviceHeader x:Name="AirPodsHeader" Title="AirPods" ShowSettings="True" />
+                <Grid x:Name="AirPodsParts" Height="130">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="88" />
+                        <ColumnDefinition Width="88" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="130" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <Image Source="{StaticResource PodImage}" Width="72" Height="96" Margin="0,0,0,8"
+                               ToolTip="Right pod" AutomationProperties.Name="Right pod" />
+                        <local:BatteryBadge x:Name="RightBattery" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <Image Source="{StaticResource PodImage}" Width="72" Height="96" Margin="0,0,0,8"
+                               ToolTip="Left pod" AutomationProperties.Name="Left pod" RenderTransformOrigin="0.5,0.5">
+                            <Image.RenderTransform>
+                                <ScaleTransform ScaleX="-1" />
+                            </Image.RenderTransform>
+                        </Image>
+                        <local:BatteryBadge x:Name="LeftBattery" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="3">
+                        <Image Source="{StaticResource CaseImage}" Width="118" Height="84" Margin="0,6,0,14"
+                               ToolTip="Case" AutomationProperties.Name="Case" />
+                        <local:BatteryBadge x:Name="CaseBattery" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- The same height as the pictures it replaces, so nothing else moves. -->
+                <StackPanel x:Name="SettingsPanel" Visibility="Collapsed" Height="130">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Ear detection" FontSize="14" />
+                            <TextBlock Text="Pause when a pod comes out" FontSize="12" Margin="0,2,0,0"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <TextBlock x:Name="EarDetectionText" Grid.Column="1" Text="Off" FontSize="12" Margin="0,0,8,0"
+                                   VerticalAlignment="Center" />
+                        <ToggleButton x:Name="EarDetectionToggle" Grid.Column="2" Style="{StaticResource SwitchStyle}"
+                                      VerticalAlignment="Center" Click="EarDetectionToggle_Click"
+                                      AutomationProperties.Name="Ear detection" />
+                    </Grid>
+                    <Grid Margin="0,9,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Low battery notification" FontSize="14" />
+                            <TextBlock Text="Alert when a battery runs low" FontSize="12" Margin="0,2,0,0"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <TextBlock x:Name="LowBatteryText" Grid.Column="1" Text="Off" FontSize="12" Margin="0,0,8,0"
+                                   VerticalAlignment="Center" />
+                        <ToggleButton x:Name="LowBatteryToggle" Grid.Column="2" Style="{StaticResource SwitchStyle}"
+                                      VerticalAlignment="Center" Click="LowBatteryToggle_Click"
+                                      AutomationProperties.Name="Low battery notification" />
+                    </Grid>
+                    <Grid x:Name="LowBatteryLevelRow">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="36" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Alert at" FontSize="12" Margin="0,0,10,0" VerticalAlignment="Center" />
+                        <Slider x:Name="LowBatteryLevelSlider" Grid.Column="1" Minimum="10" Maximum="50"
+                                TickFrequency="10" IsSnapToTickEnabled="True" VerticalAlignment="Center"
+                                PreviewMouseWheel="LowBatteryLevelSlider_PreviewMouseWheel"
+                                AutomationProperties.Name="Low battery level" />
+                        <TextBlock x:Name="LowBatteryLevelText" Grid.Column="2" FontSize="12" TextAlignment="Right"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </StackPanel>
+
+            </StackPanel>
+            </StackPanel>
+            </ScrollViewer>
         </Grid>
-        <TextBlock x:Name="ConnectionText" Margin="0,4,0,0" Text="Checking connection" />
-        <TextBlock x:Name="StatusText" Margin="0,4,0,16" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
-                   Text="Open the case near this PC, or take a pod out." />
-
-        <UniformGrid Rows="1" Columns="3">
-            <StackPanel>
-                <Path Style="{StaticResource PartIcon}" Data="{StaticResource PodGeometry}"
-                      ToolTip="Left pod" AutomationProperties.Name="Left pod"
-                      RenderTransformOrigin="0.5,0.5">
-                    <Path.RenderTransform>
-                        <ScaleTransform ScaleX="-1" />
-                    </Path.RenderTransform>
-                </Path>
-                <local:BatteryView x:Name="LeftBattery" />
-            </StackPanel>
-            <StackPanel>
-                <Path Style="{StaticResource PartIcon}" Data="{StaticResource PodGeometry}"
-                      ToolTip="Right pod" AutomationProperties.Name="Right pod" />
-                <local:BatteryView x:Name="RightBattery" />
-            </StackPanel>
-            <StackPanel>
-                <Path Style="{StaticResource PartIcon}" Data="{StaticResource CaseGeometry}"
-                      ToolTip="Case" AutomationProperties.Name="Case" />
-                <local:BatteryView x:Name="CaseBattery" />
-            </StackPanel>
-        </UniformGrid>
-
-        <TextBlock Margin="0,12,0,0" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
-                   Text="AirPods report battery in 10% steps. The case usually reports only with a pod inside and the lid open. Levels are cleared when the AirPods disconnect." />
-    </StackPanel>
+    </Border>
 </Window>

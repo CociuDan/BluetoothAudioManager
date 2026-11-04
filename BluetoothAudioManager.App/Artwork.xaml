@@ -1,0 +1,276 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StreamGeometry x:Key="PodHead">M13,23 C12,9 27,1.5 42,3 C55,4.3 66,13 67.5,25 C68.6,35 63,43.5 52,46.5 C44,48.6 33,47 25,42 C18,38 13.6,31 13,23 Z</StreamGeometry>
+    <StreamGeometry x:Key="PodStem">M21,36 C20,52 19,70 18.5,84 Q18.4,92 24.5,92 Q30.6,92 30.8,84 C31.6,70 33.4,54 35,40 Z</StreamGeometry>
+    <Pen x:Key="PodOutline" Brush="#33000000" Thickness="0.6" />
+
+    <DrawingBrush x:Key="PodMesh" TileMode="Tile" Stretch="None"
+                  Viewport="0,0,1.5,1.5" ViewportUnits="Absolute" Viewbox="0,0,1.5,1.5" ViewboxUnits="Absolute">
+        <DrawingBrush.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#17171A">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,1.5,1.5" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#44444B">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="0.75,0.75" RadiusX="0.38" RadiusY="0.38" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+
+    <DrawingImage x:Key="PodImage">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H72 V96 H0 Z" />
+
+                <GeometryDrawing Geometry="{StaticResource PodStem}" Pen="{StaticResource PodOutline}">
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Offset="0" Color="#ABABB4" />
+                            <GradientStop Offset="0.28" Color="#F4F4F7" />
+                            <GradientStop Offset="0.5" Color="#FFFFFF" />
+                            <GradientStop Offset="0.78" Color="#E2E2E7" />
+                            <GradientStop Offset="1" Color="#A2A2AC" />
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                </GeometryDrawing>
+                <GeometryDrawing Geometry="{StaticResource PodStem}">
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Offset="0" Color="#6B4A4A58" />
+                            <GradientStop Offset="0.2" Color="#004A4A58" />
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                </GeometryDrawing>
+                <GeometryDrawing Geometry="M26.4,53 L25.6,67">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#17000000" Thickness="2" StartLineCap="Round" EndLineCap="Round" />
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+                <GeometryDrawing Geometry="M18.5,85 Q18.4,92 24.5,92 Q30.6,92 30.8,85 Z">
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Offset="0" Color="#7F7F88" />
+                            <GradientStop Offset="0.45" Color="#EDEDF0" />
+                            <GradientStop Offset="1" Color="#77777F" />
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                </GeometryDrawing>
+                <GeometryDrawing Geometry="M18.5,85 H30.8">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#3E3E44" Thickness="0.6" />
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+
+                <GeometryDrawing Geometry="{StaticResource PodHead}" Pen="{StaticResource PodOutline}">
+                    <GeometryDrawing.Brush>
+                        <RadialGradientBrush Center="0.36,0.26" GradientOrigin="0.36,0.26" RadiusX="0.85" RadiusY="0.85">
+                            <GradientStop Offset="0" Color="#FFFFFF" />
+                            <GradientStop Offset="0.55" Color="#F6F6F8" />
+                            <GradientStop Offset="0.85" Color="#DEDEE3" />
+                            <GradientStop Offset="1" Color="#B9B9C2" />
+                        </RadialGradientBrush>
+                    </GeometryDrawing.Brush>
+                </GeometryDrawing>
+                <GeometryDrawing Geometry="{StaticResource PodHead}">
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Offset="0.55" Color="#005A5A69" />
+                            <GradientStop Offset="1" Color="#615A5A69" />
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                </GeometryDrawing>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <RadialGradientBrush>
+                            <GradientStop Offset="0" Color="#E6FFFFFF" />
+                            <GradientStop Offset="1" Color="#00FFFFFF" />
+                        </RadialGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="33,10" RadiusX="13" RadiusY="6">
+                            <EllipseGeometry.Transform>
+                                <RotateTransform Angle="-10" CenterX="33" CenterY="10" />
+                            </EllipseGeometry.Transform>
+                        </EllipseGeometry>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Offset="0" Color="#F2F2F5" />
+                            <GradientStop Offset="1" Color="#ABABB4" />
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="55,30" RadiusX="9.2" RadiusY="11.8">
+                            <EllipseGeometry.Transform>
+                                <RotateTransform Angle="-22" CenterX="55" CenterY="30" />
+                            </EllipseGeometry.Transform>
+                        </EllipseGeometry>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource PodMesh}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="55,30" RadiusX="6.8" RadiusY="9">
+                            <EllipseGeometry.Transform>
+                                <RotateTransform Angle="-22" CenterX="55" CenterY="30" />
+                            </EllipseGeometry.Transform>
+                        </EllipseGeometry>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Geometry="M50.5,24.5 C52,22.4 54.5,21.6 56.4,22.2">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#4DFFFFFF" Thickness="0.9" StartLineCap="Round" EndLineCap="Round" />
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource PodMesh}">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#8E8E96" Thickness="0.4" />
+                    </GeometryDrawing.Pen>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="20.5,14,15,4" RadiusX="2" RadiusY="2">
+                            <RectangleGeometry.Transform>
+                                <RotateTransform Angle="-22" CenterX="28" CenterY="16" />
+                            </RectangleGeometry.Transform>
+                        </RectangleGeometry>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#4B4B52">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="20,27" RadiusX="1.1" RadiusY="1.1" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <DrawingImage x:Key="CaseImage">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H118 V84 H0 Z" />
+                <GeometryDrawing Pen="{StaticResource PodOutline}">
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Offset="0" Color="#FFFFFF" />
+                            <GradientStop Offset="0.7" Color="#EDEDF0" />
+                            <GradientStop Offset="1" Color="#CFCFD5" />
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="2,2,114,80" RadiusX="24" RadiusY="24" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Geometry="M3,27 H115">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#B4B4BB" Thickness="0.8" />
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#8E8E95">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="59,50" RadiusX="1.7" RadiusY="1.7" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <LinearGradientBrush x:Key="HeadphoneCup" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#3A3A3E" />
+        <GradientStop Offset="1" Color="#121214" />
+    </LinearGradientBrush>
+    <Pen x:Key="HeadphoneEdge" Brush="#5E5E64" Thickness="1" />
+    <Pen x:Key="HeadphonePadEdge" Brush="#5E5E64" Thickness="0.6" />
+
+    <DrawingImage x:Key="HeadphonesImage">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H96 V96 H0 Z" />
+                <GeometryDrawing Geometry="M18,54 C18,12 78,12 78,54">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#5E5E64" Thickness="10" />
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+                <GeometryDrawing Geometry="M18,54 C18,12 78,12 78,54">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#1C1C1E" Thickness="8.4" />
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+                <GeometryDrawing Geometry="M21,46 C24,21 72,21 75,46">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#29FFFFFF" Thickness="1" />
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#4A4A4E">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="14,44,8,12" RadiusX="2" RadiusY="2" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#4A4A4E">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="74,44,8,12" RadiusX="2" RadiusY="2" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource HeadphoneCup}" Pen="{StaticResource HeadphoneEdge}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="6,52,24,38" RadiusX="11" RadiusY="11" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#0C0C0E" Pen="{StaticResource HeadphonePadEdge}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="28,56,6,30" RadiusX="3" RadiusY="3" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource HeadphoneCup}" Pen="{StaticResource HeadphoneEdge}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="66,52,24,38" RadiusX="11" RadiusY="11" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#0C0C0E" Pen="{StaticResource HeadphonePadEdge}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="62,56,6,30" RadiusX="3" RadiusY="3" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <RadialGradientBrush Center="0.38,0.32" GradientOrigin="0.38,0.32" RadiusX="0.8" RadiusY="0.8">
+                            <GradientStop Offset="0" Color="#EBD08F" />
+                            <GradientStop Offset="1" Color="#8A6B2E" />
+                        </RadialGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="78,71" RadiusX="4" RadiusY="4" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <DrawingImage x:Key="GenericHeadphonesImage">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H96 V96 H0 Z" />
+                <GeometryDrawing Geometry="M18,54 C18,12 78,12 78,54">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#8E8E95" Thickness="7" StartLineCap="Round" EndLineCap="Round" />
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#8E8E95">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="8,52,20,36" RadiusX="9" RadiusY="9" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#8E8E95">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="68,52,20,36" RadiusX="9" RadiusY="9" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+</ResourceDictionary>

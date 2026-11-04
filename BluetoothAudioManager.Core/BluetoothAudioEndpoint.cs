@@ -10,11 +10,18 @@ public sealed class BluetoothAudioEndpoint
 {
     private static readonly Guid BluetoothAudioPropertySet = new("7FA06C40-B8F6-4C7E-8556-E8C33A12E54D");
 
+    // Created by ID, because declaring this class in two places makes the runtime confuse the two.
+    private static readonly Guid DeviceEnumeratorClassId = new("BCDE0395-E52F-467C-8E3D-C4579291692E");
+
     private const uint OneShotReconnect = 0;
     private const uint OneShotDisconnect = 1;
     private const uint PropertyTypeGet = 1;
     private const uint RenderFlow = 0;
-    private const uint AllDeviceStates = 0xF;
+    private const uint ActiveDisabledOrUnplugged = 0xB;
+    private const uint ActiveOnly = 0x1;
+    private const uint ConsoleRole = 0;
+    private const uint MultimediaRole = 1;
+    private const uint CommunicationsRole = 2;
     private const uint ClsCtxAll = 0x17;
     private const ushort VtLpwstr = 31;
 
@@ -38,11 +45,14 @@ public sealed class BluetoothAudioEndpoint
         return _control.KsProperty(ref property, (uint)Marshal.SizeOf<KsProperty>(), IntPtr.Zero, 0, out _) >= 0;
     }
 
-    /// <summary>Finds matching audio outputs, including unplugged ones, as disconnected Bluetooth devices are.</summary>
+    /// <summary>
+    /// Finds matching audio outputs, including unplugged ones, as disconnected Bluetooth devices are.
+    /// Outputs marked not present are skipped, because their device has been removed from Windows.
+    /// </summary>
     public static IReadOnlyList<BluetoothAudioEndpoint> Find(Func<string, bool> nameMatches)
     {
-        var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
-        enumerator.EnumAudioEndpoints(RenderFlow, AllDeviceStates, out var devices);
+        var enumerator = CreateEnumerator();
+        enumerator.EnumAudioEndpoints(RenderFlow, ActiveDisabledOrUnplugged, out var devices);
         devices.GetCount(out var count);
 
         var endpoints = new List<BluetoothAudioEndpoint>();
@@ -67,6 +77,88 @@ public sealed class BluetoothAudioEndpoint
 
         return endpoints;
     }
+
+    /// <summary>Whether a matching output is what Windows currently plays sound through.</summary>
+    public static bool IsDefaultOutput(Func<string, bool> nameMatches)
+    {
+        var enumerator = CreateEnumerator();
+        var id = FindPreferredOutputId(enumerator, nameMatches);
+        if (id is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            enumerator.GetDefaultAudioEndpoint(RenderFlow, MultimediaRole, out var current);
+            current.GetId(out var currentId);
+            return currentId == id;
+        }
+        catch (Exception)
+        {
+            // Windows reports having no default output as an error.
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Makes a matching output the Windows default. Windows has no public API for this,
+    /// so it uses the undocumented interface that audio switchers rely on, which an update could change.
+    /// </summary>
+    /// <returns>Whether Windows accepted the change.</returns>
+    public static bool SetDefaultOutput(Func<string, bool> nameMatches)
+    {
+        var enumerator = CreateEnumerator();
+        var id = FindPreferredOutputId(enumerator, nameMatches);
+        if (id is null)
+        {
+            return false;
+        }
+
+        var policy = (IPolicyConfig)new PolicyConfigClient();
+        return policy.SetDefaultEndpoint(id, ConsoleRole) >= 0
+            && policy.SetDefaultEndpoint(id, MultimediaRole) >= 0
+            && policy.SetDefaultEndpoint(id, CommunicationsRole) >= 0;
+    }
+
+    // A Bluetooth headset has a stereo output and a much lower quality Hands-Free one, so stereo comes first.
+    private static string? FindPreferredOutputId(IMMDeviceEnumerator enumerator, Func<string, bool> nameMatches)
+    {
+        enumerator.EnumAudioEndpoints(RenderFlow, ActiveOnly, out var devices);
+        devices.GetCount(out var count);
+
+        string? fallback = null;
+        for (uint i = 0; i < count; i++)
+        {
+            devices.Item(i, out var device);
+
+            try
+            {
+                var name = GetFriendlyName(device);
+                if (name is null || !nameMatches(name))
+                {
+                    continue;
+                }
+
+                device.GetId(out var id);
+                if (!name.Contains("Hands-Free", StringComparison.OrdinalIgnoreCase))
+                {
+                    return id;
+                }
+
+                fallback ??= id;
+            }
+            catch (Exception)
+            {
+                // An output that can't be read is skipped, as in Find.
+            }
+        }
+
+        return fallback;
+    }
+
+    private static IMMDeviceEnumerator CreateEnumerator() =>
+        (IMMDeviceEnumerator)Activator.CreateInstance(Type.GetTypeFromCLSID(DeviceEnumeratorClassId)!)!;
 
     private static string? GetFriendlyName(IMMDevice device)
     {
@@ -118,8 +210,25 @@ public sealed class BluetoothAudioEndpoint
         public IntPtr Extra;
     }
 
-    [ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
-    private class MMDeviceEnumerator;
+    [ComImport, Guid("870AF99C-171D-4F9E-AF0D-E63DF40C2BC9")]
+    private class PolicyConfigClient;
+
+    // The unused methods only hold their places, because COM calls methods by position.
+    [ComImport, Guid("F8679F50-850A-41CF-9C72-430F290290C8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IPolicyConfig
+    {
+        [PreserveSig] int GetMixFormat();
+        [PreserveSig] int GetDeviceFormat();
+        [PreserveSig] int ResetDeviceFormat();
+        [PreserveSig] int SetDeviceFormat();
+        [PreserveSig] int GetProcessingPeriod();
+        [PreserveSig] int SetProcessingPeriod();
+        [PreserveSig] int GetShareMode();
+        [PreserveSig] int SetShareMode();
+        [PreserveSig] int GetPropertyValue();
+        [PreserveSig] int SetPropertyValue();
+        [PreserveSig] int SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string id, uint role);
+    }
 
     [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     private interface IMMDeviceEnumerator
@@ -141,6 +250,7 @@ public sealed class BluetoothAudioEndpoint
     {
         void Activate(ref Guid iid, uint clsCtx, IntPtr activationParams, [MarshalAs(UnmanagedType.IUnknown)] out object instance);
         void OpenPropertyStore(uint access, out IPropertyStore store);
+        void GetId([MarshalAs(UnmanagedType.LPWStr)] out string id);
     }
 
     [ComImport, Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

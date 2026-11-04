@@ -7,9 +7,9 @@ namespace BluetoothAudioManager.Core;
 /// <summary>Listens for AirPods broadcasts. Events are raised on a background thread.</summary>
 public sealed class AirPodsMonitor : IDisposable
 {
-    private const short MinimumRssi = -85;
+    private const short MinimumRssi = -95;
 
-    private readonly NearestDeviceSelector _selector = new(TimeSpan.FromSeconds(10));
+    private readonly NearestDeviceSelector _selector = new(TimeSpan.FromSeconds(3));
     private readonly Lock _lock = new();
     private BluetoothLEAdvertisementWatcher? _watcher;
 
@@ -22,6 +22,9 @@ public sealed class AirPodsMonitor : IDisposable
         StopWatcher();
 
         _watcher = new BluetoothLEAdvertisementWatcher { ScanningMode = BluetoothLEScanningMode.Active };
+
+        // Ask Windows for every broadcast it hears, rather than an occasional sample of them.
+        _watcher.SignalStrengthFilter.SamplingInterval = TimeSpan.Zero;
         _watcher.Received += OnReceived;
         _watcher.Stopped += OnStopped;
         _watcher.Start();

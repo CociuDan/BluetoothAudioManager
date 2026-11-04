@@ -81,6 +81,22 @@ public class AirPodsAdvertisementParserTests
         Assert.Equal("AirPods (model 0xABCD)", AirPodsAdvertisementParser.Parse(Message(0x20, 0x55, 0x05, 0xABCD))?.Model);
     }
 
+    [Theory]
+    [InlineData(0x22, true, false)]
+    [InlineData(0x28, false, true)]
+    [InlineData(0x02, false, true)]
+    [InlineData(0x08, true, false)]
+    [InlineData(0x2A, true, true)]
+    [InlineData(0x20, false, false)]
+    public void InEarBits_FollowTheBroadcastingPod(byte statusByte, bool left, bool right)
+    {
+        var status = AirPodsAdvertisementParser.Parse(Message(statusByte, 0x55, 0x05));
+
+        Assert.NotNull(status);
+        Assert.Equal(left, status.LeftInEar);
+        Assert.Equal(right, status.RightInEar);
+    }
+
     [Fact]
     public void AirPodsMax_IsRejected()
     {
