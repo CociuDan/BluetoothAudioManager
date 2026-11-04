@@ -18,8 +18,8 @@ public partial class MainWindow : Window
     private DateTimeOffset _lastConnectionCheck;
     private bool _findingDevices;
     private AirPodsConnectionState? _connectionState;
-    private bool _connecting;
-    private bool _connectFailed;
+    private string? _busyMessage;
+    private string? _failureMessage;
 
     private bool CanShowBattery =>
         _connectionState is not (null or AirPodsConnectionState.Disconnected);
@@ -70,15 +70,15 @@ public partial class MainWindow : Window
 
     private void ShowConnection(AirPodsConnectionState state)
     {
+        if (state != _connectionState && _busyMessage is null)
+        {
+            _failureMessage = null;
+        }
+
         _connectionState = state;
         if (state == AirPodsConnectionState.Disconnected)
         {
             _tracker.Clear();
-        }
-
-        else
-        {
-            _connectFailed = false;
         }
 
         UpdateConnectionDisplay();
@@ -87,12 +87,15 @@ public partial class MainWindow : Window
 
     private void UpdateConnectionDisplay()
     {
-        ConnectButton.IsEnabled = !_connecting && _connectionState == AirPodsConnectionState.Disconnected;
-        ConnectionText.Text = _connectionState switch
+        var connected = _connectionState == AirPodsConnectionState.Connected;
+        var paired = connected || _connectionState == AirPodsConnectionState.Disconnected;
+
+        ConnectButton.Content = connected ? "Disconnect" : "Connect";
+        ConnectButton.IsEnabled = _busyMessage is null && paired;
+        ReconnectButton.IsEnabled = _busyMessage is null && connected;
+        ConnectionText.Text = _busyMessage ?? _failureMessage ?? _connectionState switch
         {
             AirPodsConnectionState.Connected => "Connected to this PC",
-            AirPodsConnectionState.Disconnected when _connecting => "Connecting",
-            AirPodsConnectionState.Disconnected when _connectFailed => "Connection failed",
             AirPodsConnectionState.Disconnected => "Disconnected",
             _ => "No paired AirPods found in Windows",
         };
@@ -100,20 +103,39 @@ public partial class MainWindow : Window
 
     private async void ConnectButton_Click(object sender, RoutedEventArgs e)
     {
-        _connecting = true;
-        _connectFailed = false;
+        if (_connectionState == AirPodsConnectionState.Connected)
+        {
+            await RunConnectionActionAsync("Disconnecting", "Disconnect failed", _connection.DisconnectAsync);
+        }
+        else
+        {
+            await RunConnectionActionAsync("Connecting", "Connection failed", _connection.ConnectAsync);
+        }
+    }
+
+    private async void ReconnectButton_Click(object sender, RoutedEventArgs e)
+    {
+        await RunConnectionActionAsync("Reconnecting", "Reconnect failed", _connection.ReconnectAsync);
+    }
+
+    private async Task RunConnectionActionAsync(string busyMessage, string failureMessage, Func<TimeSpan, Task<bool>> action)
+    {
+        _busyMessage = busyMessage;
+        _failureMessage = null;
         UpdateConnectionDisplay();
 
+        bool succeeded;
         try
         {
-            _connectFailed = !await _connection.ConnectAsync(ConnectTimeout);
+            succeeded = await action(ConnectTimeout);
         }
         catch (Exception)
         {
-            _connectFailed = true;
+            succeeded = false;
         }
 
-        _connecting = false;
+        _busyMessage = null;
+        _failureMessage = succeeded ? null : failureMessage;
         UpdateConnectionDisplay();
     }
 

@@ -13,7 +13,7 @@ The app listens for the Bluetooth LE messages AirPods broadcast, so it doesn't n
 
 The Connected or Disconnected line comes from Windows' Bluetooth status for your paired AirPods, separately from the broadcasts. It finds them by name, so the device name must contain "AirPods". When they disconnect, the app clears all battery levels and ignores broadcasts until they reconnect.
 
-The Connect button appears enabled while the AirPods are disconnected. It asks the Windows Bluetooth audio driver to connect them, then waits up to 15 seconds and shows "Connection failed" if they don't connect.
+The Connect button becomes Disconnect while the AirPods are connected, and the Reconnect icon button next to it disconnects them and connects them again. These buttons ask the Windows Bluetooth audio driver to make the change, wait up to 15 seconds for each step, and show a failure message if it doesn't happen.
 
 ## Requirements
 

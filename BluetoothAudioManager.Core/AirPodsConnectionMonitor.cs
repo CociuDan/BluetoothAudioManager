@@ -13,6 +13,8 @@ public enum AirPodsConnectionState
 /// <summary>Follows Windows' connection status for paired AirPods. Events are raised on a background thread.</summary>
 public sealed class AirPodsConnectionMonitor : IDisposable
 {
+    private static readonly TimeSpan ReconnectPause = TimeSpan.FromSeconds(1);
+
     private IReadOnlyList<BluetoothDevice> _devices = [];
 
     public event Action<AirPodsConnectionState>? StateChanged;
@@ -54,15 +56,39 @@ public sealed class AirPodsConnectionMonitor : IDisposable
         var requested = await Task.Run(() =>
             BluetoothAudioEndpoint.Find(IsAirPods).Any(endpoint => endpoint.RequestConnect()));
 
-        if (!requested)
+        return requested && await WaitForStateAsync(AirPodsConnectionState.Connected, timeout);
+    }
+
+    /// <summary>Asks Windows to disconnect the AirPods, then waits for them to actually disconnect.</summary>
+    /// <returns>Whether they disconnected before the timeout.</returns>
+    public async Task<bool> DisconnectAsync(TimeSpan timeout)
+    {
+        // Every output is asked, because each one holds its own audio connection to the AirPods.
+        var requests = await Task.Run(() =>
+            BluetoothAudioEndpoint.Find(IsAirPods).Count(endpoint => endpoint.RequestDisconnect()));
+
+        return requests > 0 && await WaitForStateAsync(AirPodsConnectionState.Disconnected, timeout);
+    }
+
+    /// <summary>Disconnects the AirPods, then connects them again.</summary>
+    /// <returns>Whether they ended up connected.</returns>
+    public async Task<bool> ReconnectAsync(TimeSpan timeout)
+    {
+        if (!await DisconnectAsync(timeout))
         {
             return false;
         }
 
+        await Task.Delay(ReconnectPause);
+        return await ConnectAsync(timeout);
+    }
+
+    private async Task<bool> WaitForStateAsync(AirPodsConnectionState state, TimeSpan timeout)
+    {
         var deadline = DateTimeOffset.Now + timeout;
         while (DateTimeOffset.Now < deadline)
         {
-            if (State == AirPodsConnectionState.Connected)
+            if (State == state)
             {
                 return true;
             }
@@ -70,7 +96,7 @@ public sealed class AirPodsConnectionMonitor : IDisposable
             await Task.Delay(TimeSpan.FromMilliseconds(250));
         }
 
-        return State == AirPodsConnectionState.Connected;
+        return State == state;
     }
 
     public void Dispose() => ReleaseDevices();

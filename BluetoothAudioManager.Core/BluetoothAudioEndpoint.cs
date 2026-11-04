@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 namespace BluetoothAudioManager.Core;
 
 /// <summary>
-/// A Windows audio output whose driver can be asked to connect its Bluetooth device.
+/// A Windows audio output whose driver can be asked to connect or disconnect its Bluetooth device.
 /// A successful request only means the driver tried, so callers must check the connection afterwards.
 /// </summary>
 public sealed class BluetoothAudioEndpoint
@@ -11,6 +11,7 @@ public sealed class BluetoothAudioEndpoint
     private static readonly Guid BluetoothAudioPropertySet = new("7FA06C40-B8F6-4C7E-8556-E8C33A12E54D");
 
     private const uint OneShotReconnect = 0;
+    private const uint OneShotDisconnect = 1;
     private const uint PropertyTypeGet = 1;
     private const uint RenderFlow = 0;
     private const uint AllDeviceStates = 0xF;
@@ -27,9 +28,13 @@ public sealed class BluetoothAudioEndpoint
 
     public string Name { get; }
 
-    public bool RequestConnect()
+    public bool RequestConnect() => SendRequest(OneShotReconnect);
+
+    public bool RequestDisconnect() => SendRequest(OneShotDisconnect);
+
+    private bool SendRequest(uint request)
     {
-        var property = new KsProperty(BluetoothAudioPropertySet, OneShotReconnect, PropertyTypeGet);
+        var property = new KsProperty(BluetoothAudioPropertySet, request, PropertyTypeGet);
         return _control.KsProperty(ref property, (uint)Marshal.SizeOf<KsProperty>(), IntPtr.Zero, 0, out _) >= 0;
     }
 
