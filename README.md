@@ -2,7 +2,7 @@
 
 A Windows app that shows the battery of each AirPod and the case, and connects or disconnects your paired Bluetooth headphones.
 
-![A failed connection, with the message shown under each device's name](docs/images/1-connection-failed.png)
+![The window with both devices disconnected](docs/images/1-disconnected.png)
 
 ![Battery badges in green, yellow and red, with a charging bolt on the right pod](docs/images/2-colors-and-charging.png)
 
