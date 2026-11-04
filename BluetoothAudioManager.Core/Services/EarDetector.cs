@@ -1,12 +1,5 @@
 namespace BluetoothAudioManager.Core;
 
-public enum EarAction
-{
-    None,
-    Pause,
-    Resume,
-}
-
 /// <summary>Decides when to pause and resume as pods come out of and go back into the ears.</summary>
 public sealed class EarDetector
 {

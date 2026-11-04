@@ -3,20 +3,6 @@ using Windows.Devices.Enumeration;
 
 namespace BluetoothAudioManager.Core;
 
-public enum DeviceConnectionState
-{
-    NotPaired,
-    Disconnected,
-    Connected,
-}
-
-public enum DeviceActionResult
-{
-    Succeeded,
-    NoAudioOutput,
-    TimedOut,
-}
-
 /// <summary>Follows and changes Windows' connection status for a paired audio device. Events are raised on a background thread.</summary>
 /// <param name="deviceName">Text the device's Windows name must contain, so a renamed device without it isn't found.</param>
 public sealed class DeviceConnectionMonitor(string deviceName) : IDisposable

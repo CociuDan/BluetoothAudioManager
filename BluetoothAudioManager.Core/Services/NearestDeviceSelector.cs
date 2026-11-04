@@ -22,6 +22,4 @@ public sealed class NearestDeviceSelector(TimeSpan window)
 
         return _latestByAddress.Values.MaxBy(sample => sample.Rssi)!.Status;
     }
-
-    private sealed record Sample(short Rssi, AirPodsStatus Status, DateTimeOffset ReceivedAt);
 }
