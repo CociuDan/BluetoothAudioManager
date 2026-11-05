@@ -1,17 +1,24 @@
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Enumeration;
 using BluetoothAudioManager.Core.Enums;
+using BluetoothAudioManager.Core.Interfaces;
 
 namespace BluetoothAudioManager.Core.Services;
 
 /// <summary>Follows and changes Windows' connection status for a paired audio device. Events are raised on a background thread.</summary>
-/// <param name="deviceName">Text the device's Windows name must contain, so a renamed device without it isn't found.</param>
-public sealed class DeviceConnectionMonitor(string deviceName) : IDisposable
+/// <param name="nameMatches">Decides which Windows names, of devices and their audio outputs, belong to the device.</param>
+public sealed class DeviceConnectionMonitor(Func<string, bool> nameMatches) : IAudioDeviceConnection
 {
     private static readonly TimeSpan ReconnectPause = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan ConnectRetryEvery = TimeSpan.FromSeconds(3);
 
     private IReadOnlyList<BluetoothDevice> _devices = [];
+
+    /// <param name="deviceName">Text the device's Windows name must contain, so a renamed device without it isn't found.</param>
+    public DeviceConnectionMonitor(string deviceName)
+        : this(name => name.Contains(deviceName, StringComparison.OrdinalIgnoreCase))
+    {
+    }
 
     public event Action<DeviceConnectionState>? StateChanged;
 
@@ -20,8 +27,9 @@ public sealed class DeviceConnectionMonitor(string deviceName) : IDisposable
         : _devices.Any(device => device.ConnectionStatus == BluetoothConnectionStatus.Connected) ? DeviceConnectionState.Connected
         : DeviceConnectionState.Disconnected;
 
-    public bool Matches(string name) =>
-        name.Contains(deviceName, StringComparison.OrdinalIgnoreCase);
+    public bool CanConnect => true;
+
+    public bool Matches(string name) => nameMatches(name);
 
     /// <summary>Refreshes the device list, so a device paired or removed while the app runs is noticed.</summary>
     public async Task FindDevicesAsync()

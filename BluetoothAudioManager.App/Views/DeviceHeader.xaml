@@ -50,7 +50,7 @@
                         ToolTip="Reconnect" ToolTipService.ShowOnDisabled="True"
                         AutomationProperties.Name="Reconnect" />
                 <Button x:Name="SettingsButton" Style="{StaticResource HeaderButtonStyle}" Content="&#xE713;" Visibility="Collapsed"
-                        Click="SettingsButton_Click"
+                        Click="SettingsButton_Click" IsEnabled="False" ToolTipService.ShowOnDisabled="True"
                         FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"
                         MinWidth="0" Width="36" Margin="8,0,0,0" Padding="0" VerticalAlignment="Stretch"
                         ToolTip="Settings" AutomationProperties.Name="Settings" />

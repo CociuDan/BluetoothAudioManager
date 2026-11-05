@@ -4,32 +4,34 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using BluetoothAudioManager.App.Models;
 using BluetoothAudioManager.Core.Enums;
+using BluetoothAudioManager.Core.Interfaces;
 using BluetoothAudioManager.Core.Models;
 using BluetoothAudioManager.Core.Services;
 
 namespace BluetoothAudioManager.App.Views;
 
 /// <summary>
-/// A paired audio device with no special support: its picture and connection buttons.
+/// An audio device other than AirPods with pods: its picture and connection buttons.
 /// A battery badge and settings appear only if Windows reports a level for it.
 /// </summary>
 public partial class HeadphoneRow : UserControl, IDisposable
 {
-    private readonly DeviceConnectionMonitor _connection;
+    private readonly IAudioDeviceConnection _connection;
     private readonly AppSettings _settings;
     private readonly LowBatteryWatcher _lowBatteryWatcher = new();
     private readonly DispatcherTimer _batteryTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private readonly string _title;
     private bool _reportsBattery;
 
-    public HeadphoneRow(string deviceName, string title, ImageSource picture, AppSettings settings)
+    /// <param name="connection">Follows the device. The row disposes of it.</param>
+    public HeadphoneRow(string deviceName, string title, ImageSource picture, AppSettings settings, IAudioDeviceConnection connection)
     {
         InitializeComponent();
 
         DeviceName = deviceName;
         _title = title;
         _settings = settings;
-        _connection = new DeviceConnectionMonitor(deviceName);
+        _connection = connection;
         Header.Title = title;
         Picture.Source = picture;
 
@@ -37,7 +39,7 @@ public partial class HeadphoneRow : UserControl, IDisposable
         BatterySetting.Show(saved.Enabled, saved.Level);
         BatterySetting.Changed += OnLowBatteryChanged;
         Header.SettingsClicked += () => ShowSettings(BatterySetting.Visibility != Visibility.Visible);
-        Header.StateChanged += _ => RefreshBattery();
+        Header.StateChanged += OnStateChanged;
         _batteryTimer.Tick += (_, _) => RefreshBattery();
 
         Header.Follow(_connection);
@@ -69,6 +71,17 @@ public partial class HeadphoneRow : UserControl, IDisposable
         BatterySetting.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
         PictureArea.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
         Header.SettingsOpen = open;
+    }
+
+    private void OnStateChanged(DeviceConnectionState state)
+    {
+        // Settings can only be opened while connected, so they close when the device disconnects.
+        if (state != DeviceConnectionState.Connected)
+        {
+            ShowSettings(false);
+        }
+
+        RefreshBattery();
     }
 
     private void OnLowBatteryChanged(bool enabled, int level)

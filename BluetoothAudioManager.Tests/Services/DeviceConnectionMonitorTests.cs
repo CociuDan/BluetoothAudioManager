@@ -17,4 +17,14 @@ public class DeviceConnectionMonitorTests
 
         Assert.Equal(expected, monitor.Matches(name));
     }
+
+    [Theory]
+    [InlineData("AirPods", true)]
+    [InlineData("AirPods Max", false)]
+    public void Matches_CanUseACustomRule(string name, bool expected)
+    {
+        using var monitor = new DeviceConnectionMonitor(PairedAudioDevices.IsAirPodsWithPods);
+
+        Assert.Equal(expected, monitor.Matches(name));
+    }
 }

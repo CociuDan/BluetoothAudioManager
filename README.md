@@ -22,16 +22,18 @@ The app listens for the Bluetooth LE messages AirPods broadcast, so it doesn't n
 - The case usually reports only with a pod inside and the lid open.
 - A level clears after 1 minute without an update, and all levels clear when the AirPods disconnect. Broadcasts are ignored until they reconnect.
 - Broadcasts aren't tied to a paired device, so the app shows the strongest signal nearby. It could show someone else's AirPods if yours aren't broadcasting.
-- AirPods Max aren't supported.
+- AirPods Max broadcasts aren't read. AirPods Max appear like other headphones, with their own picture.
 - For other headphones, the app reads the level Windows stores, if there is one, using a property Microsoft doesn't document. A device with a level gets a battery badge and a settings button with its own low battery notification. A device without one, like the Marshall Major IV, shows neither.
 
 ### Connections
 
-The app lists every paired Bluetooth audio device, connected or not, with connected devices first, and checks for changes every 5 seconds. AirPods are recognized by "AirPods" in their Windows name, so a renamed pair appears as generic headphones with no battery levels. If you've paired more than one set of AirPods, they share one row. The window shows two devices by default, then scrolls. Drag its top or bottom edge to fit anywhere from one device to all of them, and it remembers that height. With only one device, the window is that device's size.
+The app lists every paired Bluetooth audio device, connected or not, with connected devices first, and checks for changes every 5 seconds. AirPods are recognized by "AirPods" in their Windows name, so a renamed pair appears as generic headphones with no battery levels. If you've paired more than one set of AirPods, they share one row. AirPods Max are recognized by "AirPods Max" in their name or by their product ID, and get a row of their own. Each row is titled with the device's name in Windows. The window shows two devices by default, then scrolls. Drag its top or bottom edge to fit anywhere from one device to all of them, and it remembers that height. With only one device, the window is that device's size.
 
 The connection state comes from Windows' Bluetooth status for those devices.
 
-The Connect button becomes Disconnect while a device is connected, and the Reconnect icon button next to it disconnects the device and connects it again. These buttons ask the Windows Bluetooth audio driver to make the change, wait up to 15 seconds for each step, and show a failure message if it doesn't happen.
+The Connect button becomes Disconnect while a device is connected, and the Reconnect icon button next to it disconnects the device and connects it again. The settings button only works while the device is connected, and open settings close when it disconnects.
+
+Jabra headsets that connect through a Jabra Link USB adapter aren't paired with Windows, so the app finds the adapter among the sound outputs instead, and lists it while it's plugged in. Its row has only the system output button, because the adapter handles the connection itself. It shows as connected whenever the adapter is plugged in, even with the headset off. A Jabra Link 370 shows the Jabra Evolve 65 picture, as that's the headset it comes with. These buttons ask the Windows Bluetooth audio driver to make the change, wait up to 15 seconds for each step, and show a failure message if it doesn't happen.
 
 ### Ear detection
 
@@ -54,7 +56,9 @@ Starting with Windows opens the app hidden in the tray. The setting stores the p
 
 ### Product images
 
-`Assets/AirPodsPod.png` and `Assets/AirPodsCase.png` come from Apple, and `Assets/MajorIV.png` from Marshall, and `Assets/JabraEvolve65.png` and `Assets/JabraEvolve65Mono.png` from Jabra, and those companies own them. The pod and Major IV images are edited cut-outs. They're here for private use only, so remove them before publishing this repo or sharing the app.
+The AirPods pictures in `Assets` come from Apple, `Assets/MajorIV.png` from Marshall, and `Assets/JabraEvolve65.png` and `Assets/JabraEvolve65Mono.png` from Jabra, and those companies own them. The pod and Major IV images are edited cut-outs. They're here for private use only, so remove them before publishing this repo or sharing the app.
+
+The AirPods pictures are chosen by the product ID Windows stores for the paired AirPods. AirPods 3, AirPods 4 and AirPods Pro have their own pictures, and all AirPods Pro use the AirPods Pro 1 pictures. AirPods 1, AirPods 2 and models not recognized yet, such as AirPods 5 and AirPods Pro 3, show the AirPods 4 pictures.
 
 ## Requirements
 

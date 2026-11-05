@@ -3,11 +3,13 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using BluetoothAudioManager.App.Helpers;
 using BluetoothAudioManager.App.Models;
 using BluetoothAudioManager.App.Services;
 using BluetoothAudioManager.Core.Enums;
+using BluetoothAudioManager.Core.Helpers;
+using BluetoothAudioManager.Core.Interfaces;
 using BluetoothAudioManager.Core.Models;
 using BluetoothAudioManager.Core.Services;
 
@@ -26,7 +28,7 @@ public partial class MainWindow : Window
     private const int DefaultVisibleRows = 2;
 
     private readonly AirPodsMonitor _monitor = new();
-    private readonly DeviceConnectionMonitor _airPodsConnection = new(PairedAudioDevices.AirPodsName);
+    private readonly DeviceConnectionMonitor _airPodsConnection = new(name => PairedAudioDevices.IsAirPodsWithPods(name));
     private readonly List<HeadphoneRow> _otherRows = [];
     private readonly BatteryTracker _tracker = new();
     private readonly AppSettings _settings = AppSettings.Load();
@@ -47,6 +49,8 @@ public partial class MainWindow : Window
     private double _allDevicesHeight;
     private DateTimeOffset _lastHiddenByClickAway;
     private bool _closeAllowed;
+    private string? _airPodsName;
+    private AirPodsFamily? _airPodsFamily;
 
     private bool CanShowBattery =>
         AirPodsHeader.State is not (null or DeviceConnectionState.Disconnected);
@@ -157,7 +161,7 @@ public partial class MainWindow : Window
 
         try
         {
-            ShowDevices(await PairedAudioDevices.FindNamesAsync());
+            ShowDevices(await PairedAudioDevices.FindAsync());
         }
         catch (Exception)
         {
@@ -169,20 +173,25 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ShowDevices(IReadOnlyList<string> names)
+    private void ShowDevices(IReadOnlyList<PairedAudioDevice> devices)
     {
-        var otherNames = names.Where(name => !PairedAudioDevices.IsAirPods(name)).ToList();
+        // Every pair of AirPods with pods shares the one AirPods row; anything else gets a row of its own.
+        var airPods = devices.Where(device => PairedAudioDevices.IsAirPodsWithPods(device)).ToList();
+        var others = devices.Except(airPods).ToList();
 
-        foreach (var row in _otherRows.Where(row => !otherNames.Contains(row.DeviceName)).ToList())
+        foreach (var row in _otherRows.Where(row => others.All(device => device.Name != row.DeviceName)).ToList())
         {
             DevicesPanel.Children.Remove(row);
             _otherRows.Remove(row);
             row.Dispose();
         }
 
-        foreach (var name in otherNames.Where(name => _otherRows.All(row => row.DeviceName != name)))
+        foreach (var device in others.Where(device => _otherRows.All(row => row.DeviceName != device.Name)))
         {
-            var row = new HeadphoneRow(name, TitleFor(name), PictureFor(name), _settings);
+            IAudioDeviceConnection connection = device.IsUsbAdapter
+                ? new UsbHeadsetMonitor(device.Name)
+                : new DeviceConnectionMonitor(device.Name);
+            var row = new HeadphoneRow(device.Name, device.Name, PictureFor(device), _settings, connection);
             row.LowBatteryAlert += (title, message) => LowBatteryAlert?.Invoke(title, message);
             row.HeightChanged += () =>
             {
@@ -193,8 +202,15 @@ public partial class MainWindow : Window
             DevicesPanel.Children.Add(row);
         }
 
-        AirPodsSection.Visibility = names.Count > otherNames.Count ? Visibility.Visible : Visibility.Collapsed;
-        NoDevicesPanel.Visibility = names.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (airPods.FirstOrDefault() is { } shown)
+        {
+            _airPodsName = shown.Name;
+            ShowAirPodsPictures(AppleProducts.FamilyOf(shown.AppleProductId));
+            Refresh();
+        }
+
+        AirPodsSection.Visibility = airPods.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        NoDevicesPanel.Visibility = devices.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         ShowDividers();
 
         if (!_devicesShownOnce)
@@ -205,16 +221,35 @@ public partial class MainWindow : Window
         }
     }
 
-    private static string TitleFor(string deviceName) =>
-        IsMajorIV(deviceName) ? "Marshall Major IV" : deviceName;
+    private ImageSource PictureFor(PairedAudioDevice device)
+    {
+        if (AppleProducts.FamilyOf(device.AppleProductId) == AirPodsFamily.AirPodsMax || PairedAudioDevices.IsAirPodsMax(device.Name))
+        {
+            return ProductPictures.AirPodsMax;
+        }
 
-    private ImageSource PictureFor(string deviceName) =>
-        IsMajorIV(deviceName)
-            ? new BitmapImage(new Uri("pack://application:,,,/Assets/MajorIV.png"))
-            : (ImageSource)FindResource("GenericHeadphonesImage");
+        // The Jabra Link 370 adapter comes with Evolve 65 headsets, and the adapter doesn't say which headset is paired to it.
+        if (device.Name.Contains("Jabra Link 370", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProductPictures.JabraEvolve65;
+        }
+
+        return IsMajorIV(device.Name) ? ProductPictures.MajorIV : (ImageSource)FindResource("GenericHeadphonesImage");
+    }
 
     private static bool IsMajorIV(string deviceName) =>
         deviceName.Contains("MAJOR IV", StringComparison.OrdinalIgnoreCase);
+
+    private void ShowAirPodsPictures(AirPodsFamily family)
+    {
+        if (family == _airPodsFamily)
+        {
+            return;
+        }
+
+        _airPodsFamily = family;
+        (RightPodPicture.Source, LeftPodPicture.Source, CasePicture.Source) = ProductPictures.ForAirPods(family);
+    }
 
     // Only done as the window opens, so rows don't move while it's being used.
     private void ArrangeRows()
@@ -447,6 +482,12 @@ public partial class MainWindow : Window
 
     private void OnAirPodsStateChanged(DeviceConnectionState state)
     {
+        // Settings can only be opened while connected, so they close when the AirPods disconnect.
+        if (state != DeviceConnectionState.Connected)
+        {
+            ShowSettings(false);
+        }
+
         if (state == DeviceConnectionState.Disconnected)
         {
             _tracker.Clear();
@@ -514,7 +555,7 @@ public partial class MainWindow : Window
         var now = DateTimeOffset.Now;
         var snapshot = CanShowBattery ? _tracker.Current : null;
 
-        AirPodsHeader.Title = snapshot?.Model ?? "AirPods";
+        AirPodsHeader.Title = _airPodsName ?? PairedAudioDevices.AirPodsName;
 
         if (snapshot is not null)
         {

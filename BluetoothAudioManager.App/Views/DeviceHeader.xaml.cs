@@ -3,7 +3,7 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using BluetoothAudioManager.Core.Enums;
-using BluetoothAudioManager.Core.Services;
+using BluetoothAudioManager.Core.Interfaces;
 
 namespace BluetoothAudioManager.App.Views;
 
@@ -13,7 +13,7 @@ public partial class DeviceHeader : UserControl
     private static readonly TimeSpan ActionTimeout = TimeSpan.FromSeconds(15);
 
     private readonly DispatcherTimer _findTimer = new() { Interval = TimeSpan.FromSeconds(5) };
-    private DeviceConnectionMonitor? _connection;
+    private IAudioDeviceConnection? _connection;
     private bool _findingDevices;
     private string? _busyMessage;
     private string? _failureMessage;
@@ -57,9 +57,18 @@ public partial class DeviceHeader : UserControl
         }
     }
 
-    public void Follow(DeviceConnectionMonitor connection)
+    public void Follow(IAudioDeviceConnection connection)
     {
         _connection = connection;
+
+        // A headset on its own USB adapter can't be connected from here, so it only gets the output and settings buttons.
+        if (!connection.CanConnect)
+        {
+            ConnectButton.Visibility = Visibility.Collapsed;
+            ReconnectButton.Visibility = Visibility.Collapsed;
+            OutputButton.Margin = new Thickness(0);
+        }
+
         connection.StateChanged += state => Dispatcher.BeginInvoke(() => OnStateChanged(state));
         FindDevices();
         _findTimer.Start();
@@ -163,6 +172,7 @@ public partial class DeviceHeader : UserControl
         ConnectButton.Content = connected ? "Disconnect" : "Connect";
         ConnectButton.IsEnabled = _busyMessage is null && paired;
         ReconnectButton.IsEnabled = _busyMessage is null && connected;
+        SettingsButton.IsEnabled = connected;
         MessageText.Text = _busyMessage
             ?? _failureMessage
             ?? _notice

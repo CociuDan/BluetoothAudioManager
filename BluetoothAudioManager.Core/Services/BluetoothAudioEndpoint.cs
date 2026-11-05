@@ -149,7 +149,7 @@ public sealed class BluetoothAudioEndpoint
         return fallback;
     }
 
-    private static string? GetFriendlyName(IMMDevice device)
+    internal static string? GetFriendlyName(IMMDevice device)
     {
         const uint StgmRead = 0;
         var friendlyName = new PropertyKey(new Guid("A45C254E-DF1C-4EFD-8020-67D146A850E0"), 14);

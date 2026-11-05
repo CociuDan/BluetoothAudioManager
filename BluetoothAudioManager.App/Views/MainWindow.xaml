@@ -97,23 +97,19 @@
                         <ColumnDefinition Width="130" />
                     </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <Image Source="/Assets/AirPodsPod.png" Height="96" Margin="0,0,0,8" Stretch="Uniform"
-                               RenderOptions.BitmapScalingMode="HighQuality" RenderTransformOrigin="0.5,0.5"
-                               ToolTip="Right pod" AutomationProperties.Name="Right pod">
-                            <Image.RenderTransform>
-                                <ScaleTransform ScaleX="-1" />
-                            </Image.RenderTransform>
-                        </Image>
+                        <Image x:Name="RightPodPicture" Source="/Assets/AirPods4Pod-R.png" Height="96" Margin="0,0,0,8" Stretch="Uniform"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               ToolTip="Right pod" AutomationProperties.Name="Right pod" />
                         <local:BatteryBadge x:Name="RightBattery" Label="R" />
                     </StackPanel>
                     <StackPanel Grid.Column="1">
-                        <Image Source="/Assets/AirPodsPod.png" Height="96" Margin="0,0,0,8" Stretch="Uniform"
+                        <Image x:Name="LeftPodPicture" Source="/Assets/AirPods4Pod-L.png" Height="96" Margin="0,0,0,8" Stretch="Uniform"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                ToolTip="Left pod" AutomationProperties.Name="Left pod" />
                         <local:BatteryBadge x:Name="LeftBattery" Label="L" />
                     </StackPanel>
                     <StackPanel Grid.Column="3">
-                        <Image Source="/Assets/AirPodsCase.png" Height="96" Margin="0,0,0,8" Stretch="Uniform"
+                        <Image x:Name="CasePicture" Source="/Assets/AirPods4Case.png" Height="96" Margin="0,0,0,8" Stretch="Uniform"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                ToolTip="Case" AutomationProperties.Name="Case" />
                         <local:BatteryBadge x:Name="CaseBattery" />
