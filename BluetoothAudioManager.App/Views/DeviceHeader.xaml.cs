@@ -31,7 +31,7 @@ public partial class DeviceHeader : UserControl
 
     public event Action? SettingsClicked;
 
-    /// <summary>Raised when the user presses on the title, to start dragging the device to another place.</summary>
+    /// <summary>Raised when the user presses on the drag handle, to start dragging the device to another place.</summary>
     public event Action? DragStarted;
 
     public bool SettingsOpen
@@ -213,10 +213,11 @@ public partial class DeviceHeader : UserControl
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e) => SettingsClicked?.Invoke();
 
-    private void TitleArea_MouseChanged(object sender, MouseEventArgs e) =>
-        DragHandle.Visibility = TitleArea.IsMouseOver ? Visibility.Visible : Visibility.Hidden;
+    // The dots show while the mouse is over the name or the handle itself.
+    private void Handle_MouseChanged(object sender, MouseEventArgs e) =>
+        DragDots.Opacity = TitleText.IsMouseOver || DragHandle.IsMouseOver ? 1 : 0;
 
-    private void TitleArea_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void DragHandle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;
         DragStarted?.Invoke();

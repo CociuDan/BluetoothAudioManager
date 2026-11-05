@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
+using BluetoothAudioManager.App.Helpers;
 using BluetoothAudioManager.App.Models;
 using BluetoothAudioManager.Core.Enums;
 using BluetoothAudioManager.Core.Interfaces;
@@ -59,19 +60,28 @@ public partial class HeadphoneRow : UserControl, IDisposable
     /// <summary>Raised with the title and message to show when the battery runs low.</summary>
     public event Action<string, string>? LowBatteryAlert;
 
-    /// <summary>Raised when the row changes height, because the device turned out to report a battery.</summary>
-    public event Action? HeightChanged;
-
-    /// <summary>Raised when the user presses on the title, to start dragging the row to another place.</summary>
+    /// <summary>Raised when the user presses on the drag handle, to start dragging the row to another place.</summary>
     public event Action? DragStarted;
 
     public string DeviceName { get; }
 
     public bool IsConnected => Header.State == DeviceConnectionState.Connected;
 
+    /// <summary>Shows or hides the divider above the row. Its space stays either way, so every row is the same height.</summary>
     public bool ShowDivider
     {
-        set => Divider.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+        set => Divider.Visibility = value ? Visibility.Visible : Visibility.Hidden;
+    }
+
+    /// <summary>Shows the row lifted off the list while it's dragged. Its divider fades, so the row keeps its height.</summary>
+    public bool Lifted
+    {
+        set
+        {
+            Panel.SetZIndex(this, value ? 1 : 0);
+            LiftedCard.Apply(Card, value);
+            Divider.Opacity = value ? 0 : 1;
+        }
     }
 
     /// <summary>The title shown and used in alerts, for when a better name than the Windows one becomes known.</summary>
@@ -126,8 +136,8 @@ public partial class HeadphoneRow : UserControl, IDisposable
         {
             _reportsBattery = true;
             Header.ShowSettings = true;
+            // The badge's space is kept from the start, so showing it doesn't change the row's height.
             Badge.Visibility = Visibility.Visible;
-            HeightChanged?.Invoke();
         }
 
         var now = DateTimeOffset.Now;

@@ -21,6 +21,12 @@ internal static class WindowBackdrop
     private static readonly Brush LightSurface = new SolidColorBrush(Color.FromArgb(0xC7, 0xF3, 0xF3, 0xF3));
     private static readonly Brush LightEdge = new SolidColorBrush(Color.FromArgb(0x24, 0x00, 0x00, 0x00));
 
+    /// <summary>Whether the window follows the light app theme, as last applied.</summary>
+    public static bool IsLight { get; private set; } = true;
+
+    /// <summary>The window's thin edge, for anything drawn to look like part of the window.</summary>
+    public static Brush Edge => IsLight ? LightEdge : DarkEdge;
+
     public static void Follow(Window window, Border surface)
     {
         UserPreferenceChangedEventHandler onChanged = (_, e) =>
@@ -46,10 +52,10 @@ internal static class WindowBackdrop
     private static void ApplyTheme(Border surface)
     {
         // The value is missing on Windows versions without a theme setting, which are light.
-        var isLight = (Registry.GetValue(PersonalizeKey, "AppsUseLightTheme", 1) as int? ?? 1) != 0;
+        IsLight = (Registry.GetValue(PersonalizeKey, "AppsUseLightTheme", 1) as int? ?? 1) != 0;
 
-        surface.Background = isLight ? LightSurface : DarkSurface;
-        surface.BorderBrush = isLight ? LightEdge : DarkEdge;
+        surface.Background = IsLight ? LightSurface : DarkSurface;
+        surface.BorderBrush = Edge;
     }
 
     private static void EnableBlur(IntPtr handle)

@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using BluetoothAudioManager.App.Helpers;
 using BluetoothAudioManager.App.Models;
@@ -28,12 +29,9 @@ public partial class MainWindow : Window
     private const int DefaultVisibleRows = 2;
     private const string AirPodsOrderKey = "AirPods";
 
-    // How far the drop line reaches into the left margin, and sits above the first device or below the last.
-    private const double DropLineOverhang = 12;
-    private const double DropLineGap = 10;
-
-    // Where a row's divider is, from the top of the row.
-    private const double DividerCenter = 12.5;
+    // How long a dropped row takes to settle, and other rows take to slide aside while one is dragged.
+    private static readonly TimeSpan ReorderDuration = TimeSpan.FromMilliseconds(250);
+    private static readonly TimeSpan ShiftDuration = TimeSpan.FromMilliseconds(150);
 
     private readonly AirPodsMonitor _monitor = new();
     private readonly DeviceConnectionMonitor _airPodsConnection = new(name => PairedAudioDevices.IsAirPodsWithPods(name));
@@ -62,7 +60,13 @@ public partial class MainWindow : Window
     private string? _airPodsName;
     private AirPodsFamily? _airPodsFamily;
     private UIElement? _draggedRow;
-    private int? _dropIndex;
+    private List<UIElement> _dragRows = [];
+    private List<double> _dragTops = [];
+    private readonly Dictionary<UIElement, double> _dragShifts = [];
+    private TranslateTransform _draggedSlide = new();
+    private int _draggedIndex;
+    private int _dropIndex;
+    private double _dragStartY;
 
     private bool CanShowBattery =>
         AirPodsHeader.State is not (null or DeviceConnectionState.Disconnected);
@@ -233,11 +237,6 @@ public partial class MainWindow : Window
 
             row.LowBatteryAlert += (title, message) => LowBatteryAlert?.Invoke(title, message);
             row.DragStarted += () => StartDrag(row);
-            row.HeightChanged += () =>
-            {
-                SizeToDevices();
-                PositionInCorner();
-            };
             _otherRows.Add(row);
             DevicesPanel.Children.Add(row);
         }
@@ -305,59 +304,124 @@ public partial class MainWindow : Window
         ShowDividers();
     }
 
+    // Each moved row starts drawn where it was, then slides to its new place.
+    // The places before include any slide still running, so a quick second drop starts from where the rows are seen.
+    private void SlideIntoPlace(Dictionary<UIElement, double> before)
+    {
+        foreach (var row in before.Keys)
+        {
+            row.RenderTransform = Transform.Identity;
+        }
+
+        DevicesPanel.UpdateLayout();
+
+        foreach (var (row, oldTop) in before)
+        {
+            var offset = oldTop - TopOf(row);
+            if (Math.Abs(offset) < 0.5)
+            {
+                continue;
+            }
+
+            var slide = new TranslateTransform(0, offset);
+            row.RenderTransform = slide;
+            slide.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(offset, 0, ReorderDuration)
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut },
+            });
+        }
+    }
+
+    private double TopOf(UIElement row) => row.TranslatePoint(new Point(0, 0), DevicesPanel).Y;
+
     private static string OrderKeyOf(UIElement row) =>
         row is HeadphoneRow headphones ? headphones.DeviceName : AirPodsOrderKey;
 
     private List<UIElement> VisibleRows() =>
         DevicesPanel.Children.Cast<UIElement>().Where(row => row.Visibility == Visibility.Visible).ToList();
 
+    // Lifts the row, and notes where every row sits in the list, as the drag works from those places.
     private void StartDrag(UIElement row)
     {
+        foreach (var shown in VisibleRows())
+        {
+            shown.RenderTransform = Transform.Identity;
+        }
+
+        DevicesPanel.UpdateLayout();
+        _dragRows = VisibleRows();
+        _dragTops = _dragRows.Select(TopOf).ToList();
+        _dragShifts.Clear();
         _draggedRow = row;
-        _dropIndex = null;
-        row.Opacity = 0.5;
+        _draggedIndex = _dropIndex = _dragRows.IndexOf(row);
+        _dragStartY = Mouse.GetPosition(DevicesPanel).Y;
+        _draggedSlide = new TranslateTransform();
+        row.RenderTransform = _draggedSlide;
+        Lift(row, true);
         DevicesArea.CaptureMouse();
-        MoveDrag(Mouse.GetPosition(DevicesPanel));
     }
 
-    // Finds the gap nearest the mouse, and shows the drop line there unless dropping would leave the row where it is.
+    // The dragged row follows the mouse, and the rows it passes slide aside to open a gap where it would land.
     private void MoveDrag(Point mouse)
     {
-        if (_draggedRow is null)
+        if (_draggedRow is not { } row)
         {
             return;
         }
 
-        var rows = VisibleRows();
-        var index = rows.FindIndex(row =>
-            mouse.Y < row.TranslatePoint(new Point(0, 0), DevicesPanel).Y + row.RenderSize.Height / 2);
-        if (index < 0)
+        var top = _dragTops[_draggedIndex];
+        var height = row.RenderSize.Height;
+        var lastBottom = _dragTops[^1] + _dragRows[^1].RenderSize.Height;
+        var offset = Math.Clamp(mouse.Y - _dragStartY, -top, lastBottom - height - top);
+        _draggedSlide.Y = offset;
+
+        // A row is passed once the dragged row's leading edge crosses its middle: the top edge going up, the bottom edge going down.
+        // Edges rather than the dragged row's middle, because the row can't leave the list, and a tall row's middle
+        // would never get past a shorter first or last row.
+        var draggedTop = top + offset;
+        var draggedBottom = draggedTop + height;
+        _dropIndex = _draggedIndex;
+
+        for (var index = 0; index < _dragRows.Count; index++)
         {
-            index = rows.Count;
+            if (index == _draggedIndex)
+            {
+                continue;
+            }
+
+            var middle = _dragTops[index] + _dragRows[index].RenderSize.Height / 2;
+            var passed = index < _draggedIndex ? draggedTop < middle : draggedBottom > middle;
+            if (passed)
+            {
+                _dropIndex += index < _draggedIndex ? -1 : 1;
+            }
+
+            ShiftRow(_dragRows[index], !passed ? 0 : index < _draggedIndex ? height : -height);
         }
-
-        var draggedIndex = rows.IndexOf(_draggedRow);
-        if (index == draggedIndex || index == draggedIndex + 1)
-        {
-            _dropIndex = null;
-            DropLine.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        _dropIndex = index;
-        double y = index switch
-        {
-            0 => rows[0].TranslatePoint(new Point(0, 0), DevicesArea).Y - DropLineGap,
-            _ when index == rows.Count => rows[^1].TranslatePoint(new Point(0, rows[^1].RenderSize.Height), DevicesArea).Y + DropLineGap,
-            _ => rows[index].TranslatePoint(new Point(0, 0), DevicesArea).Y + DividerCenter,
-        };
-
-        Canvas.SetLeft(DropLine, DevicesPanel.Margin.Left - DropLineOverhang);
-        Canvas.SetTop(DropLine, y - DropLine.Height / 2);
-        DropLine.Width = DevicesPanel.ActualWidth + DropLineOverhang;
-        DropLine.Visibility = Visibility.Visible;
     }
 
+    // Slides a row aside, starting a new slide only when where it should be changes.
+    private void ShiftRow(UIElement row, double shift)
+    {
+        if (_dragShifts.TryGetValue(row, out var current) && current == shift)
+        {
+            return;
+        }
+
+        _dragShifts[row] = shift;
+        if (row.RenderTransform is not TranslateTransform slide || slide.IsFrozen)
+        {
+            slide = new TranslateTransform();
+            row.RenderTransform = slide;
+        }
+
+        slide.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(shift, ShiftDuration)
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+        });
+    }
+
+    // On a drop the row moves to its new place in the list; either way, every row slides from where it's seen to where it belongs.
     private void EndDrag(bool drop)
     {
         if (_draggedRow is not { } row)
@@ -367,23 +431,41 @@ public partial class MainWindow : Window
 
         // Cleared first, because releasing the mouse comes back here through LostMouseCapture.
         _draggedRow = null;
-        row.Opacity = 1;
-        DropLine.Visibility = Visibility.Collapsed;
         DevicesArea.ReleaseMouseCapture();
 
-        if (!drop || _dropIndex is not { } index)
+        var before = VisibleRows().ToDictionary(shown => shown, TopOf);
+        Lift(row, false);
+
+        var moved = drop && _dropIndex != _draggedIndex;
+        if (moved)
         {
-            return;
+            var others = _dragRows.Where(other => other != row).ToList();
+            var target = _dropIndex < others.Count ? others[_dropIndex] : null;
+            DevicesPanel.Children.Remove(row);
+            DevicesPanel.Children.Insert(target is null ? DevicesPanel.Children.Count : DevicesPanel.Children.IndexOf(target), row);
+            ShowDividers();
         }
 
-        var rows = VisibleRows();
-        var target = index < rows.Count ? rows[index] : null;
-        DevicesPanel.Children.Remove(row);
-        DevicesPanel.Children.Insert(target is null ? DevicesPanel.Children.Count : DevicesPanel.Children.IndexOf(target), row);
-        ShowDividers();
+        SlideIntoPlace(before);
 
-        _settings.DeviceOrder = DeviceOrder.Merge(_settings.DeviceOrder, VisibleRows().Select(OrderKeyOf).ToList());
-        _settings.Save();
+        if (moved)
+        {
+            _settings.DeviceOrder = DeviceOrder.Merge(_settings.DeviceOrder, VisibleRows().Select(OrderKeyOf).ToList());
+            _settings.Save();
+        }
+    }
+
+    private void Lift(UIElement row, bool lifted)
+    {
+        if (row is HeadphoneRow headphones)
+        {
+            headphones.Lifted = lifted;
+        }
+        else
+        {
+            LiftedCard.Apply(AirPodsSection, lifted);
+            AirPodsDivider.Opacity = lifted ? 0 : 1;
+        }
     }
 
     private void ShowDividers()
@@ -403,7 +485,7 @@ public partial class MainWindow : Window
             }
             else
             {
-                AirPodsDivider.Visibility = isFirst ? Visibility.Collapsed : Visibility.Visible;
+                AirPodsDivider.Visibility = isFirst ? Visibility.Hidden : Visibility.Visible;
             }
 
             isFirst = false;

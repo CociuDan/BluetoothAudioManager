@@ -3,8 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Height="26">
     <StackPanel x:Name="BadgeArea" Visibility="Collapsed" Orientation="Horizontal" HorizontalAlignment="Center">
-        <Border x:Name="Badge" CornerRadius="6" Padding="9,0">
-            <TextBlock x:Name="PercentText" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+        <!-- A fixed width that fits "R 100%", so the badge doesn't change size with the level. -->
+        <Border x:Name="Badge" CornerRadius="6" Padding="9,0" Width="72">
+            <TextBlock x:Name="PercentText" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center" />
         </Border>
         <!-- Zero width, so the bolt sits beside the badge without moving it off center. -->
         <Canvas Width="0">

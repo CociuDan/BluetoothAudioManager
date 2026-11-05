@@ -85,12 +85,19 @@
 
             <ScrollViewer x:Name="DevicesScroller" Grid.Row="1" VerticalScrollBarVisibility="Disabled">
             <Grid x:Name="DevicesArea">
-            <StackPanel x:Name="DevicesPanel" Margin="30,20,20,20">
-            <StackPanel x:Name="AirPodsSection" Visibility="Collapsed">
-                <Border x:Name="AirPodsDivider" Height="1" Margin="0,12" Visibility="Collapsed"
+            <!--
+                The left margin is 8, plus 22 inside each row for the drag handle, so content still starts 30 from the edge.
+                Every row keeps 25 pixels for a divider above it, hidden on the first row, so all rows are the same height.
+                The top margin of -5 makes up for that, so the first name still starts 20 from the top.
+            -->
+            <StackPanel x:Name="DevicesPanel" Margin="8,-5,20,20">
+            <!-- A Border, like the other rows' UserControl, so it can be lifted as a card while dragged. -->
+            <Border x:Name="AirPodsSection" Visibility="Collapsed">
+            <StackPanel>
+                <Border x:Name="AirPodsDivider" Height="1" Margin="22,12,0,12" Visibility="Hidden"
                         Background="{DynamicResource DividerStrokeColorDefaultBrush}" />
                 <local:DeviceHeader x:Name="AirPodsHeader" Title="AirPods" ShowSettings="True" />
-                <Grid x:Name="AirPodsParts" Height="130">
+                <Grid x:Name="AirPodsParts" Height="130" Margin="22,0,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="88" />
                         <ColumnDefinition Width="88" />
@@ -119,7 +126,7 @@
                 </Grid>
 
                 <!-- The same height as the pictures it replaces, so nothing else moves. -->
-                <StackPanel x:Name="SettingsPanel" Visibility="Collapsed" Height="130">
+                <StackPanel x:Name="SettingsPanel" Visibility="Collapsed" Height="130" Margin="22,0,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -141,12 +148,8 @@
                 </StackPanel>
 
             </StackPanel>
+            </Border>
             </StackPanel>
-            <!-- Shows where a dragged device will go. -->
-            <Canvas IsHitTestVisible="False">
-                <Border x:Name="DropLine" Height="3" CornerRadius="1.5" Visibility="Collapsed"
-                        Background="{DynamicResource AccentFillColorDefaultBrush}" />
-            </Canvas>
             </Grid>
             </ScrollViewer>
 
