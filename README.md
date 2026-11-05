@@ -54,7 +54,7 @@ Starting with Windows opens the app hidden in the tray. The setting stores the p
 
 ### Product images
 
-`Assets/AirPodsPod.png` and `Assets/AirPodsCase.png` come from Apple, and `Assets/MajorIV.png` from Marshall, and those companies own them. The pod and Major IV images are edited cut-outs. They're here for private use only, so remove them before publishing this repo or sharing the app.
+`Assets/AirPodsPod.png` and `Assets/AirPodsCase.png` come from Apple, and `Assets/MajorIV.png` from Marshall, and `Assets/JabraEvolve65.png` and `Assets/JabraEvolve65Mono.png` from Jabra, and those companies own them. The pod and Major IV images are edited cut-outs. They're here for private use only, so remove them before publishing this repo or sharing the app.
 
 ## Requirements
 
