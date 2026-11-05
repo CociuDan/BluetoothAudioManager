@@ -53,7 +53,7 @@ The headphones button to the left of Connect makes that device the system sound 
 
 ### System tray
 
-The app runs from the system tray. Click its icon to show or hide the window above the bottom-right of the taskbar. Clicking elsewhere or pressing the window's X hides it, and the app keeps running. Right-click the icon for **Start with Windows** and **Exit**.
+The app runs from the system tray, where its icon is a Bluetooth symbol in front of a gray speaker. The window and the program file use the same icon, drawn in `Assets/TrayIcon.svg` and `Assets/AppIcon.svg`, which the `.ico` files are made from. Click the tray icon to show or hide the window above the bottom-right of the taskbar. Clicking elsewhere or pressing the window's X hides it, and the app keeps running. Right-click the icon for **Start with Windows** and **Exit**.
 
 Starting with Windows opens the app hidden in the tray. The setting stores the path of the build you turned it on from, so turn it on again if that build moves.
 
