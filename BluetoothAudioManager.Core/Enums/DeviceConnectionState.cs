@@ -1,4 +1,4 @@
-namespace BluetoothAudioManager.Core;
+namespace BluetoothAudioManager.Core.Enums;
 
 public enum DeviceConnectionState
 {

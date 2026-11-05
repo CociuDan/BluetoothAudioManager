@@ -1,4 +1,4 @@
-namespace BluetoothAudioManager.Core;
+namespace BluetoothAudioManager.Core.Models;
 
 /// <summary>A battery's latest known level. ReportedAt is null if it hasn't reported since the app started.</summary>
 public sealed record TrackedBattery(int? Percent, bool IsCharging, DateTimeOffset? ReportedAt)

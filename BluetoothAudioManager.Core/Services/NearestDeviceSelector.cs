@@ -1,4 +1,6 @@
-namespace BluetoothAudioManager.Core;
+using BluetoothAudioManager.Core.Models;
+
+namespace BluetoothAudioManager.Core.Services;
 
 /// <summary>
 /// Broadcasts aren't tied to a paired device and can come from anyone's AirPods,
@@ -6,11 +8,11 @@ namespace BluetoothAudioManager.Core;
 /// </summary>
 public sealed class NearestDeviceSelector(TimeSpan window)
 {
-    private readonly Dictionary<ulong, Sample> _latestByAddress = [];
+    private readonly Dictionary<ulong, AdvertisementSample> _latestByAddress = [];
 
     public AirPodsStatus Select(ulong address, short rssi, AirPodsStatus status, DateTimeOffset now)
     {
-        _latestByAddress[address] = new Sample(rssi, status, now);
+        _latestByAddress[address] = new AdvertisementSample(rssi, status, now);
 
         foreach (var (key, sample) in _latestByAddress)
         {

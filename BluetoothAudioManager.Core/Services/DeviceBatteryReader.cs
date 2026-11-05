@@ -1,6 +1,6 @@
 using Windows.Devices.Enumeration;
 
-namespace BluetoothAudioManager.Core;
+namespace BluetoothAudioManager.Core.Services;
 
 /// <summary>
 /// Reads the battery level Windows stores for a Bluetooth device, if the device reports one.

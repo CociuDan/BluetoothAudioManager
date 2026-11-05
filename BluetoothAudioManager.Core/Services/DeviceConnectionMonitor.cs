@@ -1,7 +1,8 @@
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Enumeration;
+using BluetoothAudioManager.Core.Enums;
 
-namespace BluetoothAudioManager.Core;
+namespace BluetoothAudioManager.Core.Services;
 
 /// <summary>Follows and changes Windows' connection status for a paired audio device. Events are raised on a background thread.</summary>
 /// <param name="deviceName">Text the device's Windows name must contain, so a renamed device without it isn't found.</param>
@@ -103,12 +104,6 @@ public sealed class DeviceConnectionMonitor(string deviceName) : IDisposable
     public Task<bool> SetAsDefaultOutputAsync() =>
         Task.Run(() => BluetoothAudioEndpoint.SetDefaultOutput(Matches));
 
-    public void Dispose()
-    {
-        Release(_devices);
-        _devices = [];
-    }
-
     private async Task<DeviceActionResult> FinishAsync(int requests, DeviceConnectionState state, TimeSpan timeout)
     {
         if (requests == 0)
@@ -145,4 +140,10 @@ public sealed class DeviceConnectionMonitor(string deviceName) : IDisposable
     }
 
     private void OnConnectionStatusChanged(BluetoothDevice sender, object args) => StateChanged?.Invoke(State);
+
+    public void Dispose()
+    {
+        Release(_devices);
+        _devices = [];
+    }
 }

@@ -1,4 +1,6 @@
-namespace BluetoothAudioManager.Core;
+using BluetoothAudioManager.Core.Models;
+
+namespace BluetoothAudioManager.Core.Services;
 
 /// <summary>
 /// Keeps each battery's last reported level, because a part can briefly stop reporting,

@@ -1,8 +1,10 @@
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.Advertisement;
+using BluetoothAudioManager.Core.Models;
+using BluetoothAudioManager.Core.Parsers;
 
-namespace BluetoothAudioManager.Core;
+namespace BluetoothAudioManager.Core.Services;
 
 /// <summary>Listens for AirPods broadcasts. Events are raised on a background thread.</summary>
 public sealed class AirPodsMonitor : IDisposable
@@ -29,8 +31,6 @@ public sealed class AirPodsMonitor : IDisposable
         _watcher.Stopped += OnStopped;
         _watcher.Start();
     }
-
-    public void Dispose() => StopWatcher();
 
     private void StopWatcher()
     {
@@ -82,4 +82,6 @@ public sealed class AirPodsMonitor : IDisposable
             ScanFailed?.Invoke(args.Error);
         }
     }
+
+    public void Dispose() => StopWatcher();
 }

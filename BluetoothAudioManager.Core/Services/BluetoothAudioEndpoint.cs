@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
+using BluetoothAudioManager.Core.Interop;
 
-namespace BluetoothAudioManager.Core;
+namespace BluetoothAudioManager.Core.Services;
 
 /// <summary>
 /// A Windows audio output whose driver can be asked to connect or disconnect its Bluetooth device.
@@ -9,9 +10,6 @@ namespace BluetoothAudioManager.Core;
 public sealed class BluetoothAudioEndpoint
 {
     private static readonly Guid BluetoothAudioPropertySet = new("7FA06C40-B8F6-4C7E-8556-E8C33A12E54D");
-
-    // Created by ID, because declaring this class in two places makes the runtime confuse the two.
-    private static readonly Guid DeviceEnumeratorClassId = new("BCDE0395-E52F-467C-8E3D-C4579291692E");
 
     private const uint OneShotReconnect = 0;
     private const uint OneShotDisconnect = 1;
@@ -35,23 +33,13 @@ public sealed class BluetoothAudioEndpoint
 
     public string Name { get; }
 
-    public bool RequestConnect() => SendRequest(OneShotReconnect);
-
-    public bool RequestDisconnect() => SendRequest(OneShotDisconnect);
-
-    private bool SendRequest(uint request)
-    {
-        var property = new KsProperty(BluetoothAudioPropertySet, request, PropertyTypeGet);
-        return _control.KsProperty(ref property, (uint)Marshal.SizeOf<KsProperty>(), IntPtr.Zero, 0, out _) >= 0;
-    }
-
     /// <summary>
     /// Finds matching audio outputs, including unplugged ones, as disconnected Bluetooth devices are.
     /// Outputs marked not present are skipped, because their device has been removed from Windows.
     /// </summary>
     public static IReadOnlyList<BluetoothAudioEndpoint> Find(Func<string, bool> nameMatches)
     {
-        var enumerator = CreateEnumerator();
+        var enumerator = AudioDeviceEnumerator.Create();
         enumerator.EnumAudioEndpoints(RenderFlow, ActiveDisabledOrUnplugged, out var devices);
         devices.GetCount(out var count);
 
@@ -81,7 +69,7 @@ public sealed class BluetoothAudioEndpoint
     /// <summary>Whether a matching output is what Windows currently plays sound through.</summary>
     public static bool IsDefaultOutput(Func<string, bool> nameMatches)
     {
-        var enumerator = CreateEnumerator();
+        var enumerator = AudioDeviceEnumerator.Create();
         var id = FindPreferredOutputId(enumerator, nameMatches);
         if (id is null)
         {
@@ -108,7 +96,7 @@ public sealed class BluetoothAudioEndpoint
     /// <returns>Whether Windows accepted the change.</returns>
     public static bool SetDefaultOutput(Func<string, bool> nameMatches)
     {
-        var enumerator = CreateEnumerator();
+        var enumerator = AudioDeviceEnumerator.Create();
         var id = FindPreferredOutputId(enumerator, nameMatches);
         if (id is null)
         {
@@ -120,6 +108,10 @@ public sealed class BluetoothAudioEndpoint
             && policy.SetDefaultEndpoint(id, MultimediaRole) >= 0
             && policy.SetDefaultEndpoint(id, CommunicationsRole) >= 0;
     }
+
+    public bool RequestConnect() => SendRequest(OneShotReconnect);
+
+    public bool RequestDisconnect() => SendRequest(OneShotDisconnect);
 
     // A Bluetooth headset has a stereo output and a much lower quality Hands-Free one, so stereo comes first.
     private static string? FindPreferredOutputId(IMMDeviceEnumerator enumerator, Func<string, bool> nameMatches)
@@ -157,9 +149,6 @@ public sealed class BluetoothAudioEndpoint
         return fallback;
     }
 
-    private static IMMDeviceEnumerator CreateEnumerator() =>
-        (IMMDeviceEnumerator)Activator.CreateInstance(Type.GetTypeFromCLSID(DeviceEnumeratorClassId)!)!;
-
     private static string? GetFriendlyName(IMMDevice device)
     {
         const uint StgmRead = 0;
@@ -193,98 +182,9 @@ public sealed class BluetoothAudioEndpoint
     [DllImport("ole32.dll")]
     private static extern int PropVariantClear(ref PropVariant value);
 
-    [StructLayout(LayoutKind.Sequential)]
-    private readonly record struct KsProperty(Guid Set, uint Id, uint Flags);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private readonly record struct PropertyKey(Guid Format, uint Id);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct PropVariant
+    private bool SendRequest(uint request)
     {
-        public ushort Type;
-        public ushort Reserved1;
-        public ushort Reserved2;
-        public ushort Reserved3;
-        public IntPtr Pointer;
-        public IntPtr Extra;
-    }
-
-    [ComImport, Guid("870AF99C-171D-4F9E-AF0D-E63DF40C2BC9")]
-    private class PolicyConfigClient;
-
-    // The unused methods only hold their places, because COM calls methods by position.
-    [ComImport, Guid("F8679F50-850A-41CF-9C72-430F290290C8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IPolicyConfig
-    {
-        [PreserveSig] int GetMixFormat();
-        [PreserveSig] int GetDeviceFormat();
-        [PreserveSig] int ResetDeviceFormat();
-        [PreserveSig] int SetDeviceFormat();
-        [PreserveSig] int GetProcessingPeriod();
-        [PreserveSig] int SetProcessingPeriod();
-        [PreserveSig] int GetShareMode();
-        [PreserveSig] int SetShareMode();
-        [PreserveSig] int GetPropertyValue();
-        [PreserveSig] int SetPropertyValue();
-        [PreserveSig] int SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string id, uint role);
-    }
-
-    [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IMMDeviceEnumerator
-    {
-        void EnumAudioEndpoints(uint dataFlow, uint stateMask, out IMMDeviceCollection devices);
-        void GetDefaultAudioEndpoint(uint dataFlow, uint role, out IMMDevice device);
-        void GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IMMDevice device);
-    }
-
-    [ComImport, Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IMMDeviceCollection
-    {
-        void GetCount(out uint count);
-        void Item(uint index, out IMMDevice device);
-    }
-
-    [ComImport, Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IMMDevice
-    {
-        void Activate(ref Guid iid, uint clsCtx, IntPtr activationParams, [MarshalAs(UnmanagedType.IUnknown)] out object instance);
-        void OpenPropertyStore(uint access, out IPropertyStore store);
-        void GetId([MarshalAs(UnmanagedType.LPWStr)] out string id);
-    }
-
-    [ComImport, Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IPropertyStore
-    {
-        void GetCount(out uint count);
-        void GetAt(uint index, out PropertyKey key);
-        void GetValue(ref PropertyKey key, out PropVariant value);
-    }
-
-    [ComImport, Guid("2A07407E-6497-4A18-9787-32F79BD0D98F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IDeviceTopology
-    {
-        void GetConnectorCount(out uint count);
-        void GetConnector(uint index, out IConnector connector);
-    }
-
-    [ComImport, Guid("9C2C4058-23F5-41DE-877A-DF3AF236A09E"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IConnector
-    {
-        void GetType(out int type);
-        void GetDataFlow(out int flow);
-        void ConnectTo(IConnector other);
-        void Disconnect();
-        void IsConnected([MarshalAs(UnmanagedType.Bool)] out bool connected);
-        void GetConnectedTo(out IConnector other);
-        void GetConnectorIdConnectedTo([MarshalAs(UnmanagedType.LPWStr)] out string id);
-        void GetDeviceIdConnectedTo([MarshalAs(UnmanagedType.LPWStr)] out string id);
-    }
-
-    [ComImport, Guid("28F54685-06FD-11D2-B27A-00A0C9223196"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IKsControl
-    {
-        [PreserveSig]
-        int KsProperty(ref KsProperty property, uint propertyLength, IntPtr data, uint dataLength, out uint bytesReturned);
+        var property = new KsProperty(BluetoothAudioPropertySet, request, PropertyTypeGet);
+        return _control.KsProperty(ref property, (uint)Marshal.SizeOf<KsProperty>(), IntPtr.Zero, 0, out _) >= 0;
     }
 }

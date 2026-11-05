@@ -1,4 +1,6 @@
-namespace BluetoothAudioManager.Core;
+using BluetoothAudioManager.Core.Models;
+
+namespace BluetoothAudioManager.Core.Parsers;
 
 /// <summary>
 /// Parses the proximity pairing message AirPods broadcast over Bluetooth LE.

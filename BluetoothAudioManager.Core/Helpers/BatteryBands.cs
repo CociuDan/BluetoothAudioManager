@@ -1,4 +1,6 @@
-namespace BluetoothAudioManager.Core;
+using BluetoothAudioManager.Core.Enums;
+
+namespace BluetoothAudioManager.Core.Helpers;
 
 public static class BatteryBands
 {

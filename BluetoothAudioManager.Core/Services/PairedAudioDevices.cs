@@ -1,7 +1,7 @@
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Enumeration;
 
-namespace BluetoothAudioManager.Core;
+namespace BluetoothAudioManager.Core.Services;
 
 /// <summary>Finds the audio devices paired with this PC, connected or not.</summary>
 public static class PairedAudioDevices

@@ -1,6 +1,6 @@
 using Windows.Media.Control;
 
-namespace BluetoothAudioManager.Core;
+namespace BluetoothAudioManager.Core.Services;
 
 /// <summary>
 /// Controls the apps playing media. Every app is checked, because the one Windows

@@ -1,4 +1,6 @@
-namespace BluetoothAudioManager.Core;
+using BluetoothAudioManager.Core.Models;
+
+namespace BluetoothAudioManager.Core.Services;
 
 /// <summary>
 /// Decides when to warn about a low battery: once when a part reaches the level,

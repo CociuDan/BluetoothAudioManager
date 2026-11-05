@@ -1,4 +1,6 @@
-namespace BluetoothAudioManager.Core;
+using BluetoothAudioManager.Core.Enums;
+
+namespace BluetoothAudioManager.Core.Services;
 
 /// <summary>Decides when to pause and resume as pods come out of and go back into the ears.</summary>
 public sealed class EarDetector

@@ -1,4 +1,4 @@
-namespace BluetoothAudioManager.Core;
+namespace BluetoothAudioManager.Core.Models;
 
 public sealed record AirPodsSnapshot(
     string Model,

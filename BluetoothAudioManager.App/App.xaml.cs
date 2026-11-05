@@ -1,4 +1,6 @@
 ﻿using System.Windows;
+using BluetoothAudioManager.App.Services;
+using BluetoothAudioManager.App.Views;
 
 namespace BluetoothAudioManager.App;
 
