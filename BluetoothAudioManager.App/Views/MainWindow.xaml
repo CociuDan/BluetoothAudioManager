@@ -84,6 +84,7 @@
             </StackPanel>
 
             <ScrollViewer x:Name="DevicesScroller" Grid.Row="1" VerticalScrollBarVisibility="Disabled">
+            <Grid x:Name="DevicesArea">
             <StackPanel x:Name="DevicesPanel" Margin="30,20,20,20">
             <StackPanel x:Name="AirPodsSection" Visibility="Collapsed">
                 <Border x:Name="AirPodsDivider" Height="1" Margin="0,12" Visibility="Collapsed"
@@ -96,17 +97,18 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="130" />
                     </Grid.ColumnDefinitions>
+                    <!-- Left pod first, then the right pod, then the case. -->
                     <StackPanel>
-                        <Image x:Name="RightPodPicture" Source="/Assets/AirPods4Pod-R.png" Height="96" Margin="0,0,0,8" Stretch="Uniform"
-                               RenderOptions.BitmapScalingMode="HighQuality"
-                               ToolTip="Right pod" AutomationProperties.Name="Right pod" />
-                        <local:BatteryBadge x:Name="RightBattery" Label="R" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1">
                         <Image x:Name="LeftPodPicture" Source="/Assets/AirPods4Pod-L.png" Height="96" Margin="0,0,0,8" Stretch="Uniform"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                ToolTip="Left pod" AutomationProperties.Name="Left pod" />
                         <local:BatteryBadge x:Name="LeftBattery" Label="L" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <Image x:Name="RightPodPicture" Source="/Assets/AirPods4Pod-R.png" Height="96" Margin="0,0,0,8" Stretch="Uniform"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               ToolTip="Right pod" AutomationProperties.Name="Right pod" />
+                        <local:BatteryBadge x:Name="RightBattery" Label="R" />
                     </StackPanel>
                     <StackPanel Grid.Column="3">
                         <Image x:Name="CasePicture" Source="/Assets/AirPods4Case.png" Height="96" Margin="0,0,0,8" Stretch="Uniform"
@@ -140,6 +142,12 @@
 
             </StackPanel>
             </StackPanel>
+            <!-- Shows where a dragged device will go. -->
+            <Canvas IsHitTestVisible="False">
+                <Border x:Name="DropLine" Height="3" CornerRadius="1.5" Visibility="Collapsed"
+                        Background="{DynamicResource AccentFillColorDefaultBrush}" />
+            </Canvas>
+            </Grid>
             </ScrollViewer>
 
             <!-- The window has no Windows border to drag, so these edges resize it. The top one stops short of the X button. -->

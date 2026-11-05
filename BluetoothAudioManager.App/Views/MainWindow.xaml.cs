@@ -26,6 +26,14 @@ public partial class MainWindow : Window
     private const double WindowEdges = 2;
     private const double NoDevicesHeight = 240;
     private const int DefaultVisibleRows = 2;
+    private const string AirPodsOrderKey = "AirPods";
+
+    // How far the drop line reaches into the left margin, and sits above the first device or below the last.
+    private const double DropLineOverhang = 12;
+    private const double DropLineGap = 10;
+
+    // Where a row's divider is, from the top of the row.
+    private const double DividerCenter = 12.5;
 
     private readonly AirPodsMonitor _monitor = new();
     private readonly DeviceConnectionMonitor _airPodsConnection = new(name => PairedAudioDevices.IsAirPodsWithPods(name));
@@ -53,6 +61,8 @@ public partial class MainWindow : Window
     private bool _closeAllowed;
     private string? _airPodsName;
     private AirPodsFamily? _airPodsFamily;
+    private UIElement? _draggedRow;
+    private int? _dropIndex;
 
     private bool CanShowBattery =>
         AirPodsHeader.State is not (null or DeviceConnectionState.Disconnected);
@@ -78,6 +88,12 @@ public partial class MainWindow : Window
         };
 
         AirPodsHeader.SettingsClicked += ToggleSettings;
+
+        // While a device is dragged, the area holding the devices has the mouse, so these follow it to the drop.
+        AirPodsHeader.DragStarted += () => StartDrag(AirPodsSection);
+        DevicesArea.MouseMove += (_, e) => MoveDrag(e.GetPosition(DevicesPanel));
+        DevicesArea.MouseLeftButtonUp += (_, _) => EndDrag(drop: true);
+        DevicesArea.LostMouseCapture += (_, _) => EndDrag(drop: false);
 
         // Closed on hiding, so the window always reopens showing the batteries.
         IsVisibleChanged += (_, e) =>
@@ -185,13 +201,19 @@ public partial class MainWindow : Window
 
         foreach (var row in _otherRows.Where(row => others.All(device => device.Name != row.DeviceName)).ToList())
         {
+            if (row == _draggedRow)
+            {
+                EndDrag(drop: false);
+            }
+
             DevicesPanel.Children.Remove(row);
             _otherRows.Remove(row);
             _usbAdapterRows.Remove(row);
             row.Dispose();
         }
 
-        foreach (var device in others.Where(device => _otherRows.All(row => row.DeviceName != device.Name)))
+        var added = others.Where(device => _otherRows.All(row => row.DeviceName != device.Name)).ToList();
+        foreach (var device in added)
         {
             var name = device.Name;
             IAudioDeviceConnection connection = device.IsUsbAdapter
@@ -210,6 +232,7 @@ public partial class MainWindow : Window
             }
 
             row.LowBatteryAlert += (title, message) => LowBatteryAlert?.Invoke(title, message);
+            row.DragStarted += () => StartDrag(row);
             row.HeightChanged += () =>
             {
                 SizeToDevices();
@@ -228,6 +251,13 @@ public partial class MainWindow : Window
 
         AirPodsSection.Visibility = airPods.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         NoDevicesPanel.Visibility = devices.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        // A device paired again goes back to its saved place, and a new one goes last.
+        if (added.Count > 0 && _draggedRow is null)
+        {
+            ArrangeRows();
+        }
+
         ShowDividers();
 
         if (!_devicesShownOnce)
@@ -265,20 +295,96 @@ public partial class MainWindow : Window
         (RightPodPicture.Source, LeftPodPicture.Source, CasePicture.Source) = ProductPictures.ForAirPods(family);
     }
 
-    // Only done as the window opens, so rows don't move while it's being used.
+    // Puts the rows in the order the user dragged them into. Connecting or disconnecting never moves a row.
     private void ArrangeRows()
     {
-        var rows = DevicesPanel.Children.Cast<UIElement>().OrderByDescending(IsConnected).ToList();
+        var rows = DeviceOrder.Sort(DevicesPanel.Children.Cast<UIElement>(), OrderKeyOf, _settings.DeviceOrder);
 
         DevicesPanel.Children.Clear();
         rows.ForEach(row => DevicesPanel.Children.Add(row));
         ShowDividers();
     }
 
-    private bool IsConnected(UIElement row) =>
-        row is HeadphoneRow headphones
-            ? headphones.IsConnected
-            : AirPodsHeader.State == DeviceConnectionState.Connected;
+    private static string OrderKeyOf(UIElement row) =>
+        row is HeadphoneRow headphones ? headphones.DeviceName : AirPodsOrderKey;
+
+    private List<UIElement> VisibleRows() =>
+        DevicesPanel.Children.Cast<UIElement>().Where(row => row.Visibility == Visibility.Visible).ToList();
+
+    private void StartDrag(UIElement row)
+    {
+        _draggedRow = row;
+        _dropIndex = null;
+        row.Opacity = 0.5;
+        DevicesArea.CaptureMouse();
+        MoveDrag(Mouse.GetPosition(DevicesPanel));
+    }
+
+    // Finds the gap nearest the mouse, and shows the drop line there unless dropping would leave the row where it is.
+    private void MoveDrag(Point mouse)
+    {
+        if (_draggedRow is null)
+        {
+            return;
+        }
+
+        var rows = VisibleRows();
+        var index = rows.FindIndex(row =>
+            mouse.Y < row.TranslatePoint(new Point(0, 0), DevicesPanel).Y + row.RenderSize.Height / 2);
+        if (index < 0)
+        {
+            index = rows.Count;
+        }
+
+        var draggedIndex = rows.IndexOf(_draggedRow);
+        if (index == draggedIndex || index == draggedIndex + 1)
+        {
+            _dropIndex = null;
+            DropLine.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        _dropIndex = index;
+        double y = index switch
+        {
+            0 => rows[0].TranslatePoint(new Point(0, 0), DevicesArea).Y - DropLineGap,
+            _ when index == rows.Count => rows[^1].TranslatePoint(new Point(0, rows[^1].RenderSize.Height), DevicesArea).Y + DropLineGap,
+            _ => rows[index].TranslatePoint(new Point(0, 0), DevicesArea).Y + DividerCenter,
+        };
+
+        Canvas.SetLeft(DropLine, DevicesPanel.Margin.Left - DropLineOverhang);
+        Canvas.SetTop(DropLine, y - DropLine.Height / 2);
+        DropLine.Width = DevicesPanel.ActualWidth + DropLineOverhang;
+        DropLine.Visibility = Visibility.Visible;
+    }
+
+    private void EndDrag(bool drop)
+    {
+        if (_draggedRow is not { } row)
+        {
+            return;
+        }
+
+        // Cleared first, because releasing the mouse comes back here through LostMouseCapture.
+        _draggedRow = null;
+        row.Opacity = 1;
+        DropLine.Visibility = Visibility.Collapsed;
+        DevicesArea.ReleaseMouseCapture();
+
+        if (!drop || _dropIndex is not { } index)
+        {
+            return;
+        }
+
+        var rows = VisibleRows();
+        var target = index < rows.Count ? rows[index] : null;
+        DevicesPanel.Children.Remove(row);
+        DevicesPanel.Children.Insert(target is null ? DevicesPanel.Children.Count : DevicesPanel.Children.IndexOf(target), row);
+        ShowDividers();
+
+        _settings.DeviceOrder = DeviceOrder.Merge(_settings.DeviceOrder, VisibleRows().Select(OrderKeyOf).ToList());
+        _settings.Save();
+    }
 
     private void ShowDividers()
     {

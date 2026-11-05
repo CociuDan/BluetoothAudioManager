@@ -49,6 +49,7 @@ public partial class HeadphoneRow : UserControl, IDisposable
         BatterySetting.Changed += OnLowBatteryChanged;
         Header.SettingsClicked += () => ShowSettings(BatterySetting.Visibility != Visibility.Visible);
         Header.StateChanged += OnStateChanged;
+        Header.DragStarted += () => DragStarted?.Invoke();
         _batteryTimer.Tick += (_, _) => RefreshBattery();
 
         Header.Follow(_connection);
@@ -60,6 +61,9 @@ public partial class HeadphoneRow : UserControl, IDisposable
 
     /// <summary>Raised when the row changes height, because the device turned out to report a battery.</summary>
     public event Action? HeightChanged;
+
+    /// <summary>Raised when the user presses on the title, to start dragging the row to another place.</summary>
+    public event Action? DragStarted;
 
     public string DeviceName { get; }
 

@@ -4,7 +4,7 @@ A Windows app that shows the battery of each AirPod and the case, and connects o
 
 ![The window with both devices disconnected](docs/images/1-disconnected.png)
 
-![Battery badges in green, yellow and red, with a charging bolt on the right pod](docs/images/2-colors-and-charging.png)
+![Battery badges in green, yellow and red, with a green charging bolt next to the right pod's badge](docs/images/2-colors-and-charging.png)
 
 ![AirPods settings open, showing ear detection and low battery notification](docs/images/3-settings.png)
 
@@ -28,7 +28,7 @@ The app listens for the Bluetooth LE messages AirPods broadcast, so it doesn't n
 
 ### Connections
 
-The app lists every paired Bluetooth audio device, connected or not, with connected devices first, and checks for changes every 5 seconds. AirPods are recognized by "AirPods" in their Windows name, so a renamed pair appears as generic headphones with no battery levels. If you've paired more than one set of AirPods, they share one row. AirPods Max are recognized by "AirPods Max" in their name or by their product ID, and get a row of their own. Each row is titled with the device's name in Windows. The window shows two devices by default, then scrolls. Drag its top or bottom edge to fit anywhere from one device to all of them, and it remembers that height. With only one device, the window is that device's size.
+The app lists every paired Bluetooth audio device, connected or not, and checks for changes every 5 seconds. Devices keep their place when they connect or disconnect. To reorder them, drag a device by its name, using the handle that appears to its left. The order is saved, and a device you unpair keeps its place for when you pair it again. A newly paired device goes last. AirPods are recognized by "AirPods" in their Windows name, so a renamed pair appears as generic headphones with no battery levels. If you've paired more than one set of AirPods, they share one row. AirPods Max are recognized by "AirPods Max" in their name or by their product ID, and get a row of their own. Each row is titled with the device's name in Windows. The window shows two devices by default, then scrolls. Drag its top or bottom edge to fit anywhere from one device to all of them, and it remembers that height. With only one device, the window is that device's size.
 
 The connection state comes from Windows' Bluetooth status for those devices.
 

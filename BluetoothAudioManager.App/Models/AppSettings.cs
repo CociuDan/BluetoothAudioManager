@@ -20,6 +20,12 @@ public sealed class AppSettings
 
     public int LowBatteryLevel { get; set; } = 20;
 
+    /// <summary>
+    /// The order the user dragged the devices into: "AirPods" for the AirPods row, and the Windows name for others.
+    /// Devices that aren't paired right now stay in it, so they return to their place.
+    /// </summary>
+    public List<string> DeviceOrder { get; set; } = [];
+
     /// <summary>Low battery settings for other headphones, by their Windows name.</summary>
     public Dictionary<string, DeviceLowBattery> DeviceLowBattery { get; set; } = [];
 

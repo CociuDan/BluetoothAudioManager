@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 using BluetoothAudioManager.Core.Enums;
 using BluetoothAudioManager.Core.Interfaces;
@@ -29,6 +30,9 @@ public partial class DeviceHeader : UserControl
     public event Action<DeviceConnectionState>? StateChanged;
 
     public event Action? SettingsClicked;
+
+    /// <summary>Raised when the user presses on the title, to start dragging the device to another place.</summary>
+    public event Action? DragStarted;
 
     public bool SettingsOpen
     {
@@ -208,6 +212,15 @@ public partial class DeviceHeader : UserControl
     }
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e) => SettingsClicked?.Invoke();
+
+    private void TitleArea_MouseChanged(object sender, MouseEventArgs e) =>
+        DragHandle.Visibility = TitleArea.IsMouseOver ? Visibility.Visible : Visibility.Hidden;
+
+    private void TitleArea_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        DragStarted?.Invoke();
+    }
 
     private async void ConnectButton_Click(object sender, RoutedEventArgs e)
     {
