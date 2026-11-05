@@ -1,7 +1,9 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using BluetoothAudioManager.Core.Enums;
 using BluetoothAudioManager.Core.Interfaces;
@@ -43,7 +45,11 @@ public partial class DeviceHeader : UserControl
 
     public string Title
     {
-        set => TitleText.Text = value;
+        set
+        {
+            TitleText.Text = value;
+            TitleText.ToolTip = value;
+        }
     }
 
     public bool ShowSettings
@@ -212,6 +218,24 @@ public partial class DeviceHeader : UserControl
     }
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e) => SettingsClicked?.Invoke();
+
+    // The full name shows on hover only when the buttons leave too little room and it's cut short.
+    private void TitleText_ToolTipOpening(object sender, ToolTipEventArgs e)
+    {
+        var fullWidth = new FormattedText(
+            TitleText.Text,
+            CultureInfo.CurrentCulture,
+            TitleText.FlowDirection,
+            new Typeface(TitleText.FontFamily, TitleText.FontStyle, TitleText.FontWeight, TitleText.FontStretch),
+            TitleText.FontSize,
+            TitleText.Foreground,
+            VisualTreeHelper.GetDpi(TitleText).PixelsPerDip).WidthIncludingTrailingWhitespace;
+
+        if (fullWidth <= TitleText.ActualWidth + 0.5)
+        {
+            e.Handled = true;
+        }
+    }
 
     // The dots show while the mouse is over the name or the handle itself.
     private void Handle_MouseChanged(object sender, MouseEventArgs e) =>

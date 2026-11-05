@@ -66,7 +66,8 @@
             </Border>
             <TextBlock x:Name="TitleText" Grid.Column="1" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
                        VerticalAlignment="Center" HorizontalAlignment="Left"
-                       MouseEnter="Handle_MouseChanged" MouseLeave="Handle_MouseChanged" />
+                       MouseEnter="Handle_MouseChanged" MouseLeave="Handle_MouseChanged"
+                       ToolTipOpening="TitleText_ToolTipOpening" />
             <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
                 <Button x:Name="OutputButton" Style="{StaticResource HeaderIconButtonStyle}" Content="&#xE7F6;"
                         Click="OutputButton_Click" IsEnabled="False" Margin="0,0,8,0"
