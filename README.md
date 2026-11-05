@@ -19,6 +19,7 @@ A Windows app that shows the battery of each AirPod and the case, and connects o
 The app listens for the Bluetooth LE messages AirPods broadcast, so it doesn't need a driver. Apple doesn't document this format, so a firmware update could break it.
 
 - Readings come in 10% steps. The badge is green above 20%, yellow from 10% to 20%, and red below 10%.
+- A green bolt next to a badge shows that part is charging. AirPods and Jabra headsets report charging. Windows stores only a level for other headphones, so they never show the bolt.
 - The case usually reports only with a pod inside and the lid open.
 - A level clears after 1 minute without an update, and all levels clear when the AirPods disconnect. Broadcasts are ignored until they reconnect.
 - Broadcasts aren't tied to a paired device, so the app shows the strongest signal nearby. It could show someone else's AirPods if yours aren't broadcasting.
@@ -33,7 +34,9 @@ The connection state comes from Windows' Bluetooth status for those devices.
 
 The Connect button becomes Disconnect while a device is connected, and the Reconnect icon button next to it disconnects the device and connects it again. The settings button only works while the device is connected, and open settings close when it disconnects.
 
-Jabra headsets that connect through a Jabra Link USB adapter aren't paired with Windows, so the app finds the adapter among the sound outputs instead, and lists it while it's plugged in. Its row has only the system output button, because the adapter handles the connection itself. It shows as connected whenever the adapter is plugged in, even with the headset off. A Jabra Link 370 shows the Jabra Evolve 65 picture, as that's the headset it comes with. These buttons ask the Windows Bluetooth audio driver to make the change, wait up to 15 seconds for each step, and show a failure message if it doesn't happen.
+Jabra headsets that connect through a Jabra Link USB adapter aren't paired with Windows, so the app finds the adapter among the sound outputs instead, and lists it while it's plugged in. With Jabra's kit running, the row shows the headset as connected while it's linked to the adapter, and as disconnected when it's off or out of range. If the kit supports the adapter, the row also gets Connect, Disconnect and Reconnect, which ask the adapter to connect the headset last seen on it. Jabra lists this for the Link 380 and Link 390, so other adapters may not get these buttons. Without the kit, the row has only the system output button, and shows as connected whenever the adapter is plugged in. A Jabra Link 370 shows the Jabra Evolve 65 picture, as that's the headset it comes with.
+
+The headset's name, battery level and charging come from Jabra's own kit, which needs a partner key. Jabra gives one free to anyone registered on [developer.jabra.com](https://developer.jabra.com/site/global/docs/partner-key.gsp). Add it to the settings file as `"JabraPartnerKey": "your-key"`, then restart the app. Without a key, or for a headset the kit can't read, the row shows the adapter's name and no battery. Charging from a USB cable makes the headset appear a second time, over USB, so the row uses whichever copy reports a level, and keeps the last level if neither does. With a level, the row also gets a settings button for its low battery notification. These buttons ask the Windows Bluetooth audio driver to make the change, wait up to 15 seconds for each step, and show a failure message if it doesn't happen.
 
 ### Ear detection
 
@@ -59,6 +62,8 @@ Starting with Windows opens the app hidden in the tray. The setting stores the p
 The AirPods pictures in `Assets` come from Apple, `Assets/MajorIV.png` from Marshall, and `Assets/JabraEvolve65.png` and `Assets/JabraEvolve65Mono.png` from Jabra, and those companies own them. The pod and Major IV images are edited cut-outs. They're here for private use only, so remove them before publishing this repo or sharing the app.
 
 The AirPods pictures are chosen by the product ID Windows stores for the paired AirPods. AirPods 3, AirPods 4 and AirPods Pro have their own pictures, and all AirPods Pro use the AirPods Pro 1 pictures. AirPods 1, AirPods 2 and models not recognized yet, such as AirPods 5 and AirPods Pro 3, show the AirPods 4 pictures.
+
+Other headphones get the picture whose entry in `DevicePictures` matches part of their Windows name, such as "MAJOR IV", or a generic headphones placeholder if none does. To add a device, put its picture in `Assets` and add a line to `BluetoothAudioManager.Core/Helpers/DevicePictures.cs`.
 
 ## Requirements
 

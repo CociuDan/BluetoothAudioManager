@@ -42,13 +42,12 @@ public partial class BatteryBadge : UserControl
         };
         PercentText.Foreground = text;
         PercentText.Text = Label is null ? $"{percent}%" : $"{Label} {percent}%";
-        ChargingIcon.Fill = text;
         ChargingIcon.Visibility = battery.IsChargingAt(now) ? Visibility.Visible : Visibility.Collapsed;
-        Badge.Visibility = Visibility.Visible;
+        BadgeArea.Visibility = Visibility.Visible;
     }
 
     public void Clear()
     {
-        Badge.Visibility = Visibility.Collapsed;
+        BadgeArea.Visibility = Visibility.Collapsed;
     }
 }

@@ -23,6 +23,12 @@ public sealed class AppSettings
     /// <summary>Low battery settings for other headphones, by their Windows name.</summary>
     public Dictionary<string, DeviceLowBattery> DeviceLowBattery { get; set; } = [];
 
+    /// <summary>
+    /// The partner key Jabra gives registered developers, which its kit needs to read Jabra headsets' battery levels.
+    /// It's added to the settings file by hand, so it never ends up in the code.
+    /// </summary>
+    public string? JabraPartnerKey { get; set; }
+
     public static AppSettings Load()
     {
         try

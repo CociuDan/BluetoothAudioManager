@@ -6,4 +6,13 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Jabra's kit, for Jabra headsets' names and battery levels. Versions match Jabra's own sample. -->
+  <ItemGroup>
+    <PackageReference Include="Jabra.DeviceConnector.Windows" Version="2.3.10" />
+    <PackageReference Include="Jabra.NET.Sdk" Version="4.9.3.1" />
+    <PackageReference Include="Jabra.NET.Sdk.DevicePairing" Version="3.1.1.2" />
+    <PackageReference Include="Jabra.NET.Sdk.Properties" Version="2.5.1.1" />
+    <PackageReference Include="Jabra.Properties.Definition" Version="14.6.3" />
+  </ItemGroup>
+
 </Project>

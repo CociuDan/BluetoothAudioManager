@@ -30,6 +30,8 @@ public partial class MainWindow : Window
     private readonly AirPodsMonitor _monitor = new();
     private readonly DeviceConnectionMonitor _airPodsConnection = new(name => PairedAudioDevices.IsAirPodsWithPods(name));
     private readonly List<HeadphoneRow> _otherRows = [];
+    private readonly HashSet<HeadphoneRow> _usbAdapterRows = [];
+    private readonly JabraHeadsets _jabra = new();
     private readonly BatteryTracker _tracker = new();
     private readonly AppSettings _settings = AppSettings.Load();
     private readonly EarDetector _earDetector = new();
@@ -108,6 +110,7 @@ public partial class MainWindow : Window
             _airPodsConnection.Dispose();
             _otherRows.ForEach(row => row.Dispose());
             _outputWatcher?.Dispose();
+            _jabra.Dispose();
         };
     }
 
@@ -118,6 +121,7 @@ public partial class MainWindow : Window
         AirPodsHeader.Follow(_airPodsConnection);
         RefreshDevices();
         WatchOutput();
+        StartJabra();
         _timer.Start();
         _earDetectionTimer.Tick += (_, _) => RunEarDetection();
         _earDetectionTimer.Start();
@@ -183,15 +187,28 @@ public partial class MainWindow : Window
         {
             DevicesPanel.Children.Remove(row);
             _otherRows.Remove(row);
+            _usbAdapterRows.Remove(row);
             row.Dispose();
         }
 
         foreach (var device in others.Where(device => _otherRows.All(row => row.DeviceName != device.Name)))
         {
+            var name = device.Name;
             IAudioDeviceConnection connection = device.IsUsbAdapter
-                ? new UsbHeadsetMonitor(device.Name)
-                : new DeviceConnectionMonitor(device.Name);
-            var row = new HeadphoneRow(device.Name, device.Name, PictureFor(device), _settings, connection);
+                ? new UsbHeadsetMonitor(name, _jabra)
+                : new DeviceConnectionMonitor(name);
+            // Windows stores only a level, so only Jabra's kit can say a headset is charging.
+            Func<Task<BatteryReading?>> readBattery = device.IsUsbAdapter
+                ? () => Task.FromResult(_jabra.FindByAdapter(name) is { } headset
+                    ? new BatteryReading(headset.BatteryPercent, headset.IsCharging)
+                    : null)
+                : async () => new BatteryReading(await DeviceBatteryReader.ReadPercentAsync(name), false);
+            var row = new HeadphoneRow(name, TitleFor(device), PictureFor(device), _settings, connection, readBattery);
+            if (device.IsUsbAdapter)
+            {
+                _usbAdapterRows.Add(row);
+            }
+
             row.LowBatteryAlert += (title, message) => LowBatteryAlert?.Invoke(title, message);
             row.HeightChanged += () =>
             {
@@ -221,24 +238,21 @@ public partial class MainWindow : Window
         }
     }
 
+    // A headset on a USB adapter is named after the headset once Jabra's kit reports it, and after the adapter until then.
+    private string TitleFor(PairedAudioDevice device) =>
+        device.IsUsbAdapter ? _jabra.HeadsetNameFor(device.Name) ?? device.Name : device.Name;
+
+    // The picture matching the device's name, or the generic headphones placeholder when there's none.
+    // Renamed AirPods Max are still recognized by their product ID.
     private ImageSource PictureFor(PairedAudioDevice device)
     {
-        if (AppleProducts.FamilyOf(device.AppleProductId) == AirPodsFamily.AirPodsMax || PairedAudioDevices.IsAirPodsMax(device.Name))
+        if (AppleProducts.FamilyOf(device.AppleProductId) == AirPodsFamily.AirPodsMax)
         {
             return ProductPictures.AirPodsMax;
         }
 
-        // The Jabra Link 370 adapter comes with Evolve 65 headsets, and the adapter doesn't say which headset is paired to it.
-        if (device.Name.Contains("Jabra Link 370", StringComparison.OrdinalIgnoreCase))
-        {
-            return ProductPictures.JabraEvolve65;
-        }
-
-        return IsMajorIV(device.Name) ? ProductPictures.MajorIV : (ImageSource)FindResource("GenericHeadphonesImage");
+        return ProductPictures.ForDeviceName(device.Name) ?? (ImageSource)FindResource("GenericHeadphonesImage");
     }
-
-    private static bool IsMajorIV(string deviceName) =>
-        deviceName.Contains("MAJOR IV", StringComparison.OrdinalIgnoreCase);
 
     private void ShowAirPodsPictures(AirPodsFamily family)
     {
@@ -477,6 +491,31 @@ public partial class MainWindow : Window
         catch (Exception)
         {
             // The rows still recheck the output every few seconds without this.
+        }
+    }
+
+    private async void StartJabra()
+    {
+        _jabra.Changed += () => Dispatcher.BeginInvoke(() => OnJabraChanged());
+
+        try
+        {
+            // Without a partner key the kit may refuse to start, and Jabra rows then show no battery.
+            await _jabra.StartAsync(_settings.JabraPartnerKey ?? "");
+        }
+        catch (Exception)
+        {
+            // The Jabra row still works without the battery level.
+        }
+    }
+
+    private void OnJabraChanged()
+    {
+        foreach (var row in _usbAdapterRows)
+        {
+            row.Title = _jabra.HeadsetNameFor(row.DeviceName) ?? row.DeviceName;
+            row.RefreshConnection();
+            row.RefreshBattery();
         }
     }
 

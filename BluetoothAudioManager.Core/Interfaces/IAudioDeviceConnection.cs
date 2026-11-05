@@ -9,7 +9,10 @@ public interface IAudioDeviceConnection : IDisposable
 
     DeviceConnectionState State { get; }
 
-    /// <summary>Whether the app can connect and disconnect the device, which it can't for headsets on their own USB adapter.</summary>
+    /// <summary>
+    /// Whether the app can connect and disconnect the device. For a headset on its own USB adapter,
+    /// this depends on Jabra's kit supporting the adapter, and can change once the kit has found it.
+    /// </summary>
     bool CanConnect { get; }
 
     /// <summary>Checks for the device again, so one added or removed while the app runs is noticed.</summary>

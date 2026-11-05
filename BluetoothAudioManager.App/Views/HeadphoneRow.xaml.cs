@@ -20,11 +20,19 @@ public partial class HeadphoneRow : UserControl, IDisposable
     private readonly AppSettings _settings;
     private readonly LowBatteryWatcher _lowBatteryWatcher = new();
     private readonly DispatcherTimer _batteryTimer = new() { Interval = TimeSpan.FromSeconds(30) };
-    private readonly string _title;
+    private readonly Func<Task<BatteryReading?>> _readBattery;
+    private string _title;
     private bool _reportsBattery;
 
     /// <param name="connection">Follows the device. The row disposes of it.</param>
-    public HeadphoneRow(string deviceName, string title, ImageSource picture, AppSettings settings, IAudioDeviceConnection connection)
+    /// <param name="readBattery">Reads the device's battery level and whether it's charging. A null reading or level means it doesn't report one.</param>
+    public HeadphoneRow(
+        string deviceName,
+        string title,
+        ImageSource picture,
+        AppSettings settings,
+        IAudioDeviceConnection connection,
+        Func<Task<BatteryReading?>> readBattery)
     {
         InitializeComponent();
 
@@ -32,6 +40,7 @@ public partial class HeadphoneRow : UserControl, IDisposable
         _title = title;
         _settings = settings;
         _connection = connection;
+        _readBattery = readBattery;
         Header.Title = title;
         Picture.Source = picture;
 
@@ -61,16 +70,70 @@ public partial class HeadphoneRow : UserControl, IDisposable
         set => Divider.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>The title shown and used in alerts, for when a better name than the Windows one becomes known.</summary>
+    public string Title
+    {
+        set
+        {
+            _title = value;
+            Header.Title = value;
+        }
+    }
+
     private DeviceLowBattery SavedLowBattery =>
         _settings.DeviceLowBattery.GetValueOrDefault(DeviceName) ?? new DeviceLowBattery();
 
     public void RefreshOutputState() => Header.RefreshOutputState();
+
+    /// <summary>Checks the connection now, rather than waiting for the next regular check.</summary>
+    public void RefreshConnection() => Header.CheckNow();
 
     public void ShowSettings(bool open)
     {
         BatterySetting.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
         PictureArea.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
         Header.SettingsOpen = open;
+    }
+
+    /// <summary>Reads the battery now, rather than waiting for the next regular check.</summary>
+    public async void RefreshBattery()
+    {
+        BatteryReading? reading = null;
+
+        if (IsConnected)
+        {
+            try
+            {
+                reading = await _readBattery();
+            }
+            catch (Exception)
+            {
+                // Treated the same as a device that doesn't report a level.
+            }
+        }
+
+        if (reading?.Percent is not { } percent)
+        {
+            Badge.Clear();
+            return;
+        }
+
+        if (!_reportsBattery)
+        {
+            _reportsBattery = true;
+            Header.ShowSettings = true;
+            Badge.Visibility = Visibility.Visible;
+            HeightChanged?.Invoke();
+        }
+
+        var now = DateTimeOffset.Now;
+        Badge.Show(new TrackedBattery(percent, reading.IsCharging, now), now);
+
+        var saved = SavedLowBattery;
+        if (saved.Enabled && _lowBatteryWatcher.UpdatePart(_title, reading, saved.Level) is { } message)
+        {
+            LowBatteryAlert?.Invoke($"{_title} battery low", message);
+        }
     }
 
     private void OnStateChanged(DeviceConnectionState state)
@@ -89,47 +152,6 @@ public partial class HeadphoneRow : UserControl, IDisposable
         _settings.DeviceLowBattery[DeviceName] = new DeviceLowBattery { Enabled = enabled, Level = level };
         _settings.Save();
         _lowBatteryWatcher.Reset();
-    }
-
-    private async void RefreshBattery()
-    {
-        int? percent = null;
-
-        if (IsConnected)
-        {
-            try
-            {
-                percent = await DeviceBatteryReader.ReadPercentAsync(DeviceName);
-            }
-            catch (Exception)
-            {
-                // Treated the same as a device that doesn't report a level.
-            }
-        }
-
-        if (percent is null)
-        {
-            Badge.Clear();
-            return;
-        }
-
-        if (!_reportsBattery)
-        {
-            _reportsBattery = true;
-            Header.ShowSettings = true;
-            Badge.Visibility = Visibility.Visible;
-            HeightChanged?.Invoke();
-        }
-
-        var reading = new BatteryReading(percent, false);
-        var now = DateTimeOffset.Now;
-        Badge.Show(new TrackedBattery(percent, false, now), now);
-
-        var saved = SavedLowBattery;
-        if (saved.Enabled && _lowBatteryWatcher.UpdatePart(_title, reading, saved.Level) is { } message)
-        {
-            LowBatteryAlert?.Invoke($"{_title} battery low", message);
-        }
     }
 
     public void Dispose()

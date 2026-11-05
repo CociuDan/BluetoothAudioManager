@@ -60,21 +60,21 @@ public partial class DeviceHeader : UserControl
     public void Follow(IAudioDeviceConnection connection)
     {
         _connection = connection;
-
-        // A headset on its own USB adapter can't be connected from here, so it only gets the output and settings buttons.
-        if (!connection.CanConnect)
-        {
-            ConnectButton.Visibility = Visibility.Collapsed;
-            ReconnectButton.Visibility = Visibility.Collapsed;
-            OutputButton.Margin = new Thickness(0);
-        }
-
         connection.StateChanged += state => Dispatcher.BeginInvoke(() => OnStateChanged(state));
         FindDevices();
         _findTimer.Start();
     }
 
     public void Stop() => _findTimer.Stop();
+
+    /// <summary>Checks the connection now, rather than waiting for the next regular check.</summary>
+    public void CheckNow()
+    {
+        if (!_findingDevices && _busyMessage is null && _connection is not null)
+        {
+            FindDevices();
+        }
+    }
 
     public async void RefreshOutputState()
     {
@@ -166,6 +166,12 @@ public partial class DeviceHeader : UserControl
     {
         var connected = State == DeviceConnectionState.Connected;
         var paired = connected || State == DeviceConnectionState.Disconnected;
+
+        // Checked every time, because for a headset on a USB adapter it only becomes known once Jabra's kit finds the adapter.
+        var canConnect = _connection?.CanConnect != false;
+        ConnectButton.Visibility = canConnect ? Visibility.Visible : Visibility.Collapsed;
+        ReconnectButton.Visibility = canConnect ? Visibility.Visible : Visibility.Collapsed;
+        OutputButton.Margin = new Thickness(0, 0, canConnect ? 8 : 0, 0);
 
         OutputButton.IsEnabled = _busyMessage is null && connected;
         ShowOutputHighlight(_isDefaultOutput && connected);

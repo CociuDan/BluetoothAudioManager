@@ -1,6 +1,7 @@
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using BluetoothAudioManager.Core.Enums;
+using BluetoothAudioManager.Core.Helpers;
 
 namespace BluetoothAudioManager.App.Helpers;
 
@@ -9,9 +10,9 @@ internal static class ProductPictures
 {
     public static ImageSource AirPodsMax => Load("AirPodsMax.png");
 
-    public static ImageSource MajorIV => Load("MajorIV.png");
-
-    public static ImageSource JabraEvolve65 => Load("JabraEvolve65.png");
+    /// <returns>The device's picture, or null if there's none for it.</returns>
+    public static ImageSource? ForDeviceName(string deviceName) =>
+        DevicePictures.FileFor(deviceName) is { } fileName ? Load(fileName) : null;
 
     /// <summary>
     /// The pods and case for a family. Families without their own pictures yet, such as AirPods 1 and 2,
