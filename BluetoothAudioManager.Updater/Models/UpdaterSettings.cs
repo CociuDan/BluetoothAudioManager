@@ -13,6 +13,12 @@ public sealed class UpdaterSettings
 
     private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
 
+    /// <summary>
+    /// Whether the updater checks GitHub by itself, on its schedule. Off, it only checks when the app asks,
+    /// through Check for updates. Set from the app's settings, for everyone on the PC.
+    /// </summary>
+    public bool CheckAutomatically { get; set; } = true;
+
     /// <summary>How often to check GitHub for a new version, in minutes. 1 at the least.</summary>
     public int CheckEveryMinutes { get; set; } = DefaultCheckEveryMinutes;
 
@@ -29,13 +35,25 @@ public sealed class UpdaterSettings
             }
 
             var defaults = new UpdaterSettings();
-            File.WriteAllText(InstallLayout.SettingsPath, JsonSerializer.Serialize(defaults, WriteOptions));
+            defaults.Save();
             return defaults;
         }
         catch (Exception)
         {
-            // A file that can't be read or written just means the defaults.
+            // A file that can't be read just means the defaults.
             return new UpdaterSettings();
+        }
+    }
+
+    public void Save()
+    {
+        try
+        {
+            File.WriteAllText(InstallLayout.SettingsPath, JsonSerializer.Serialize(this, WriteOptions));
+        }
+        catch (Exception exception)
+        {
+            UpdaterLog.Write($"Couldn't save the updater's settings: {exception.Message}");
         }
     }
 }

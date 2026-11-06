@@ -19,6 +19,9 @@ public partial class AppSettingsPanel : UserControl
         InitializeComponent();
     }
 
+    /// <summary>The updater to ask about checking automatically, set by the app. Without one, that setting isn't shown.</summary>
+    public AppUpdater? Updater { get; set; }
+
     /// <summary>Shows the current settings. Start with Windows is read again, as the tray menu can change it too.</summary>
     public void Show(AppSettings settings)
     {
@@ -28,6 +31,32 @@ public partial class AppSettingsPanel : UserControl
         TransparencySlider.Value = WindowBackdrop.ClampTransparency(settings.Transparency);
         _showing = false;
         UpdateText();
+        ShowAutomaticUpdates();
+    }
+
+    // Asked of the updater each time, as someone else on the PC may have changed it. Hidden if it can't be asked.
+    private async void ShowAutomaticUpdates()
+    {
+        var on = Updater is null ? null : await Updater.IsAutomaticAsync();
+        AutomaticUpdatesRow.Visibility = on is null ? Visibility.Collapsed : Visibility.Visible;
+        AutomaticUpdatesToggle.IsChecked = on == true;
+        UpdateText();
+    }
+
+    private async void AutomaticUpdatesToggle_Click(object sender, RoutedEventArgs e)
+    {
+        var on = AutomaticUpdatesToggle.IsChecked == true;
+        UpdateText();
+        AutomaticUpdatesToggle.IsEnabled = false;
+
+        // Put back if the updater didn't take it.
+        if (Updater is null || !await Updater.SetAutomaticAsync(on))
+        {
+            AutomaticUpdatesToggle.IsChecked = !on;
+            UpdateText();
+        }
+
+        AutomaticUpdatesToggle.IsEnabled = true;
     }
 
     private void StartupToggle_Click(object sender, RoutedEventArgs e)
@@ -59,6 +88,7 @@ public partial class AppSettingsPanel : UserControl
     private void UpdateText()
     {
         StartupText.Text = StartupToggle.IsChecked == true ? "On" : "Off";
+        AutomaticUpdatesText.Text = AutomaticUpdatesToggle.IsChecked == true ? "On" : "Off";
         TransparencyText.Text = TransparencySlider.Value == 0 ? "Solid" : $"{TransparencySlider.Value:0}%";
     }
 }

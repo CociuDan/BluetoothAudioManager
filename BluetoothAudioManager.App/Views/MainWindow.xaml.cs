@@ -196,6 +196,9 @@ public partial class MainWindow : Window
     /// <summary>Lets the window really close, for when the app exits or Windows shuts down.</summary>
     public void AllowClose() => _closeAllowed = true;
 
+    /// <summary>Gives the settings the updater to ask whether it checks for updates by itself.</summary>
+    public void UseUpdater(AppUpdater updater) => AppSettingsView.Updater = updater;
+
     /// <summary>Shows the bar offering to install a downloaded update.</summary>
     public void ShowUpdateReady(string version)
     {

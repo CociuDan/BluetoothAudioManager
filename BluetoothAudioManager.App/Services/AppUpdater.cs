@@ -80,6 +80,29 @@ internal sealed class AppUpdater : IDisposable
         return await UpdaterPipe.SendAsync(command, QuickTimeout) == UpdaterPipe.OkReply;
     }
 
+    /// <summary>Whether the updater checks for updates by itself, or null if it can't be asked, such as in a build that wasn't installed.</summary>
+    public async Task<bool?> IsAutomaticAsync()
+    {
+        if (!IsInstalled)
+        {
+            return null;
+        }
+
+        return await UpdaterPipe.SendAsync(UpdaterPipe.AutomaticCommand, QuickTimeout) switch
+        {
+            UpdaterPipe.OnOption => true,
+            UpdaterPipe.OffOption => false,
+            _ => null,
+        };
+    }
+
+    /// <summary>Turns checking by itself on or off, for everyone on the PC. Returns whether the updater did it.</summary>
+    public async Task<bool> SetAutomaticAsync(bool on)
+    {
+        var command = $"{UpdaterPipe.AutomaticCommand} {(on ? UpdaterPipe.OnOption : UpdaterPipe.OffOption)}";
+        return await UpdaterPipe.SendAsync(command, QuickTimeout) == UpdaterPipe.OkReply;
+    }
+
     private static async Task<UpdateStatus> StatusAsync() =>
         UpdaterPipe.Parse(await UpdaterPipe.SendAsync(UpdaterPipe.StatusCommand, QuickTimeout));
 

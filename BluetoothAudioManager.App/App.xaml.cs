@@ -50,6 +50,7 @@ public partial class App : Application
         }
 
         _window = new MainWindow();
+        _window.UseUpdater(_updater);
         _trayIcon = new TrayIcon(_window.Toggle, ExitApp, InstallUpdate, CheckForUpdates, _updater.CurrentVersion);
         _updateNotification = new UpdateNotification(InstallUpdate, _window.ShowInCorner);
         _window.LowBatteryAlert += _trayIcon.ShowNotification;

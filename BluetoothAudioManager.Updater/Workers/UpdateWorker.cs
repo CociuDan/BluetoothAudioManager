@@ -31,8 +31,14 @@ public sealed class UpdateWorker : BackgroundService
         {
             while (!stop.IsCancellationRequested)
             {
-                await CheckAsync(stop);
-                await Task.Delay(UpdaterSettings.Load().CheckEvery, stop);
+                // Turned off in the app's settings, it only checks when the app asks.
+                var settings = UpdaterSettings.Load();
+                if (settings.CheckAutomatically)
+                {
+                    await CheckAsync(stop);
+                }
+
+                await Task.Delay(settings.CheckEvery, stop);
             }
         }
         catch (OperationCanceledException)
@@ -63,6 +69,14 @@ public sealed class UpdateWorker : BackgroundService
                 return await StartInstallAsync(client, options.Contains(UpdaterPipe.ShowWindowOption), stop)
                     ? UpdaterPipe.OkReply
                     : UpdaterPipe.Format(_status);
+
+            case [UpdaterPipe.AutomaticCommand]:
+                return UpdaterSettings.Load().CheckAutomatically ? UpdaterPipe.OnOption : UpdaterPipe.OffOption;
+
+            case [UpdaterPipe.AutomaticCommand, UpdaterPipe.OnOption or UpdaterPipe.OffOption]:
+                return SetAutomatic(client, parts[1] == UpdaterPipe.OnOption, stop)
+                    ? UpdaterPipe.OkReply
+                    : UpdaterPipe.Format(new UpdateStatus(UpdateState.Failed));
 
             default:
                 return UpdaterPipe.Format(new UpdateStatus(UpdateState.Failed));
@@ -168,7 +182,36 @@ public sealed class UpdateWorker : BackgroundService
         }
     }
 
-    // Only the installed app may ask for an install, not any program that finds the pipe.
+    /// <summary>
+    /// Turns checking by itself on or off for everyone on the PC, if the installed app is the one asking.
+    /// Turned on, it checks straight away. Turned off, anything already downloaded stops being offered.
+    /// </summary>
+    private bool SetAutomatic(PipeClient client, bool on, CancellationToken stop)
+    {
+        if (InstallLayout.InstallFolder is not { } installFolder || !IsInstalledApp(client, installFolder))
+        {
+            return false;
+        }
+
+        var settings = UpdaterSettings.Load();
+        settings.CheckAutomatically = on;
+        settings.Save();
+        UpdaterLog.Write($"Checking for updates by itself turned {(on ? "on" : "off")}, from session {client.SessionId}.");
+
+        if (on)
+        {
+            _ = Task.Run(() => CheckAsync(stop), stop);
+        }
+        else
+        {
+            _status = new UpdateStatus(UpdateState.None);
+            _ready = null;
+        }
+
+        return true;
+    }
+
+    // Only the installed app may ask for an install or change a setting, not any program that finds the pipe.
     private static bool IsInstalledApp(PipeClient client, string installFolder) =>
         string.Equals(
             client.ExecutablePath,

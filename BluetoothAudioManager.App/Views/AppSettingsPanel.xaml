@@ -25,6 +25,25 @@
                           AutomationProperties.Name="Start with Windows" />
         </Grid>
 
+        <!-- Only for the installed app, which has an updater to ask. -->
+        <Grid x:Name="AutomaticUpdatesRow" Margin="0,20,0,0" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="Check for updates automatically" FontSize="14" />
+                <TextBlock Text="Downloads new versions in the background, for everyone on this PC" FontSize="12"
+                           Margin="0,2,0,0" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+            <TextBlock x:Name="AutomaticUpdatesText" Grid.Column="1" FontSize="12" Margin="8,0,8,0" VerticalAlignment="Center" />
+            <ToggleButton x:Name="AutomaticUpdatesToggle" Grid.Column="2" Style="{StaticResource SwitchStyle}"
+                          VerticalAlignment="Center" Click="AutomaticUpdatesToggle_Click"
+                          AutomationProperties.Name="Check for updates automatically" />
+        </Grid>
+
         <Grid Margin="0,20,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
