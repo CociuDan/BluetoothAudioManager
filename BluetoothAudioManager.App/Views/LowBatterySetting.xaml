@@ -11,11 +11,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Text="Low battery notification" FontSize="14" />
-                <TextBlock Text="Alert when a battery runs low" FontSize="12" Margin="0,2,0,0"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-            </StackPanel>
+            <TextBlock Text="Low battery notification" FontSize="14" />
             <TextBlock x:Name="StateText" Grid.Column="1" Text="Off" FontSize="12" Margin="0,0,8,0"
                        VerticalAlignment="Center" />
             <ToggleButton x:Name="Toggle" Grid.Column="2" Style="{StaticResource SwitchStyle}"

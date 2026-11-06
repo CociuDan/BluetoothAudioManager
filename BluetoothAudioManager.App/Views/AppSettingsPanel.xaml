@@ -14,11 +14,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Text="Start with Windows" FontSize="14" />
-                <TextBlock Text="Opens hidden in the tray when you sign in" FontSize="12" Margin="0,2,0,0"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-            </StackPanel>
+            <TextBlock Text="Start with Windows" FontSize="14" />
             <TextBlock x:Name="StartupText" Grid.Column="1" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" />
             <ToggleButton x:Name="StartupToggle" Grid.Column="2" Style="{StaticResource SwitchStyle}"
                           VerticalAlignment="Center" Click="StartupToggle_Click"
@@ -32,12 +28,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Text="Check for updates automatically" FontSize="14" />
-                <TextBlock Text="Downloads new versions in the background, for everyone on this PC" FontSize="12"
-                           Margin="0,2,0,0" TextWrapping="Wrap"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-            </StackPanel>
+            <TextBlock Text="Check for updates automatically" FontSize="14" />
             <TextBlock x:Name="AutomaticUpdatesText" Grid.Column="1" FontSize="12" Margin="8,0,8,0" VerticalAlignment="Center" />
             <ToggleButton x:Name="AutomaticUpdatesToggle" Grid.Column="2" Style="{StaticResource SwitchStyle}"
                           VerticalAlignment="Center" Click="AutomaticUpdatesToggle_Click"
@@ -64,12 +55,8 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel>
-                <Label Content="_Transparency" Target="{Binding ElementName=TransparencySlider}" Padding="0" FontSize="14"
-                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                <TextBlock Text="How much of what's behind the window shows through" FontSize="12" Margin="0,2,0,0"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-            </StackPanel>
+                 <Label Content="_Transparency" Target="{Binding ElementName=TransparencySlider}" Padding="0" FontSize="14"
+                     Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
             <TextBlock x:Name="TransparencyText" Grid.Column="1" FontSize="12" VerticalAlignment="Bottom" />
         </Grid>
         <Slider x:Name="TransparencySlider" Margin="0,8,0,0" Minimum="0" Maximum="100" SmallChange="5" LargeChange="10"

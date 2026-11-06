@@ -180,11 +180,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="Ear detection" FontSize="14" />
-                            <TextBlock Text="Pause when a pod comes out" FontSize="12" Margin="0,2,0,0"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
+                        <TextBlock Text="Ear detection" FontSize="14" />
                         <TextBlock x:Name="EarDetectionText" Grid.Column="1" Text="Off" FontSize="12" Margin="0,0,8,0"
                                    VerticalAlignment="Center" />
                         <ToggleButton x:Name="EarDetectionToggle" Grid.Column="2" Style="{StaticResource SwitchStyle}"
