@@ -1,7 +1,7 @@
 # Builds and tests the app in Release mode, and keeps the published app for a week to download and try.
 # It runs only when started by hand: GitHub, the repository's Actions tab, "Build", "Run workflow".
 #
-# Each successful run gets a version and tags its commit with it, such as v0.0.3.
+# Each successful run gets a version, tags its commit with it, such as v0.0.3, and creates a release with the zipped app.
 # Leave the version empty to take the highest tagged version and add 1 to its last number,
 # or enter one, such as 2.0.0, to set it. Later runs then count up from there.
 name: Build
@@ -95,3 +95,15 @@ jobs:
         run: |
           git tag v${{ steps.version.outputs.number }}
           git push origin v${{ steps.version.outputs.number }}
+
+      # Shown in the Releases box on the repository's main page, with the zipped app to download.
+      # The notes list the changes since the previous release.
+      - name: Create the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.number }}
+        run: |
+          $zip = "BluetoothAudioManager-$env:VERSION-win-x64.zip"
+          Compress-Archive -Path publish\* -DestinationPath $zip
+          gh release create "v$env:VERSION" $zip --title "v$env:VERSION" --generate-notes --verify-tag
