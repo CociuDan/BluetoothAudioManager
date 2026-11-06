@@ -2,15 +2,17 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
+using BluetoothAudioManager.Shared.Helpers;
 using BluetoothAudioManager.Updater.Models;
 
 namespace BluetoothAudioManager.Updater.Services;
 
-/// <summary>Reads the repository's latest release and downloads its package, using the token the pipeline built in.</summary>
+/// <summary>Reads the repository's latest release and downloads its installer, using the token the pipeline built in.</summary>
 public sealed class GitHubReleases : IDisposable
 {
     private const string LatestReleaseUrl = "https://api.github.com/repos/CociuDan/BluetoothAudioManager/releases/latest";
     private const string TokenKey = "UpdateToken";
+    private const string DigestPrefix = "sha256:";
 
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromMinutes(10) };
 
@@ -26,8 +28,11 @@ public sealed class GitHubReleases : IDisposable
         }
     }
 
-    /// <summary>The latest release's package, or null if the latest release has none, such as one made before the updater.</summary>
-    public async Task<ReleasePackage?> LatestAsync(CancellationToken cancel)
+    /// <summary>
+    /// The latest release's installer, or null if it has none with a checksum, such as a release made before the updater.
+    /// GitHub works out each release file's checksum itself when it's uploaded.
+    /// </summary>
+    public async Task<ReleaseSetup?> LatestAsync(CancellationToken cancel)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, LatestReleaseUrl);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
@@ -41,85 +46,68 @@ public sealed class GitHubReleases : IDisposable
             return null;
         }
 
-        var packageName = $"BluetoothAudioManager-{version}.zip";
-        string? packageUrl = null;
-        string? checksumUrl = null;
-
         foreach (var asset in json.RootElement.GetProperty("assets").EnumerateArray())
         {
-            var name = asset.GetProperty("name").GetString();
-            var url = asset.GetProperty("url").GetString();
-
-            if (name == packageName)
+            if (asset.GetProperty("name").GetString() == InstallLayout.SetupFileName
+                && asset.TryGetProperty("digest", out var digest)
+                && digest.GetString() is { } value
+                && value.StartsWith(DigestPrefix, StringComparison.OrdinalIgnoreCase)
+                && asset.GetProperty("url").GetString() is { } url)
             {
-                packageUrl = url;
-            }
-            else if (name == packageName + ".sha256")
-            {
-                checksumUrl = url;
+                return new ReleaseSetup(version, url, value[DigestPrefix.Length..].ToLowerInvariant());
             }
         }
 
-        return packageUrl is null || checksumUrl is null ? null : new ReleasePackage(version, packageUrl, checksumUrl);
+        return null;
     }
 
     /// <summary>
-    /// Downloads the package to the file, unless a copy there already matches, and checks it against the release's checksum.
-    /// Throws if it doesn't match.
+    /// Downloads the installer to the file, replacing whatever was there, unless it's already this one.
+    /// Throws if the download doesn't match GitHub's checksum.
     /// </summary>
-    public async Task DownloadAsync(ReleasePackage package, string path, CancellationToken cancel)
+    public async Task DownloadAsync(ReleaseSetup setup, string path, CancellationToken cancel)
     {
-        var expected = (await DownloadTextAsync(package.ChecksumUrl, cancel)).Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
-
-        if (File.Exists(path) && await HashAsync(path, cancel) == expected.ToLowerInvariant())
+        if (await MatchesAsync(path, setup.Sha256, cancel))
         {
             return;
         }
 
+        // Asked for through the API, as the repository is private. GitHub sends it from its file storage.
         var partial = path + ".partial";
-        using (var request = AssetRequest(package.PackageUrl))
-        using (var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancel))
+        using (var request = new HttpRequestMessage(HttpMethod.Get, setup.Url))
         {
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/octet-stream"));
+            using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancel);
             response.EnsureSuccessStatusCode();
             await using var file = File.Create(partial);
             await response.Content.CopyToAsync(file, cancel);
         }
 
-        if (await HashAsync(partial, cancel) != expected.ToLowerInvariant())
+        if (!await MatchesAsync(partial, setup.Sha256, cancel))
         {
             File.Delete(partial);
-            throw new InvalidDataException($"The {package.Version} package doesn't match its checksum.");
+            throw new InvalidDataException($"The {setup.Version} installer doesn't match its checksum.");
         }
 
         File.Move(partial, path, overwrite: true);
+    }
+
+    /// <summary>Whether the file is there and matches the checksum.</summary>
+    public static async Task<bool> MatchesAsync(string path, string sha256, CancellationToken cancel)
+    {
+        if (!File.Exists(path))
+        {
+            return false;
+        }
+
+        await using var file = File.OpenRead(path);
+        return Convert.ToHexStringLower(await SHA256.HashDataAsync(file, cancel)) == sha256;
     }
 
     private static string? ReadToken() =>
         typeof(GitHubReleases).Assembly
             .GetCustomAttributes<AssemblyMetadataAttribute>()
             .FirstOrDefault(attribute => attribute.Key == TokenKey)?.Value;
-
-    private static async Task<string> HashAsync(string path, CancellationToken cancel)
-    {
-        await using var file = File.OpenRead(path);
-        return Convert.ToHexStringLower(await SHA256.HashDataAsync(file, cancel));
-    }
-
-    // A release file, asked for through the API, as the repository is private. GitHub sends it from its file storage.
-    private static HttpRequestMessage AssetRequest(string url)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/octet-stream"));
-        return request;
-    }
-
-    private async Task<string> DownloadTextAsync(string url, CancellationToken cancel)
-    {
-        using var request = AssetRequest(url);
-        using var response = await _http.SendAsync(request, cancel);
-        response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadAsStringAsync(cancel)).Trim();
-    }
 
     public void Dispose() => _http.Dispose();
 }

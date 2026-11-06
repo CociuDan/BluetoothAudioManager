@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using BluetoothAudioManager.Shared.Enums;
 using BluetoothAudioManager.Shared.Helpers;
 using BluetoothAudioManager.Shared.Models;
@@ -8,26 +9,20 @@ using Microsoft.Extensions.Hosting;
 namespace BluetoothAudioManager.Updater.Workers;
 
 /// <summary>
-/// The service's work: checks GitHub on a schedule and when the app asks, keeps a newer version downloaded and checked,
-/// and installs it when the installed app asks.
+/// The service's work: checks GitHub on a schedule and when the app asks, keeps the latest version's installer
+/// downloaded and checked in the install folder's hidden .update folder, and runs it to update when the installed app asks.
 /// </summary>
 public sealed class UpdateWorker : BackgroundService
 {
     private readonly GitHubReleases _github = new();
     private readonly SemaphoreSlim _checkGate = new(1, 1);
-
-    // Versions that failed to install, so the app isn't offered them again until the updater restarts.
-    private readonly HashSet<string> _failedVersions = [];
     private UpdateStatus _status = new(UpdateState.None);
-    private string? _readyPackage;
+    private ReleaseSetup? _ready;
     private int _installing;
-
-    private static string DownloadsFolder => Path.Combine(InstallLayout.DataFolder, "downloads");
 
     protected override async Task ExecuteAsync(CancellationToken stop)
     {
         SecureFolder.Ensure(InstallLayout.DataFolder);
-        Directory.CreateDirectory(DownloadsFolder);
         UpdaterLog.Write($"Started. Installed version {InstallLayout.InstalledVersion ?? "unknown"}.");
 
         var pipe = PipeServer.RunAsync(HandleAsync, stop);
@@ -48,6 +43,11 @@ public sealed class UpdateWorker : BackgroundService
         await pipe;
     }
 
+    private static string? SetupPath =>
+        InstallLayout.InstallFolder is { } installFolder
+            ? Path.Combine(InstallLayout.UpdateFolder(installFolder), InstallLayout.SetupFileName)
+            : null;
+
     private async Task<string> HandleAsync(string line, PipeClient client, CancellationToken stop)
     {
         var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -60,7 +60,7 @@ public sealed class UpdateWorker : BackgroundService
                 return UpdaterPipe.Format(await CheckAsync(stop));
 
             case [UpdaterPipe.InstallCommand, .. var options]:
-                return StartInstall(client, options.Contains(UpdaterPipe.ShowWindowOption))
+                return await StartInstallAsync(client, options.Contains(UpdaterPipe.ShowWindowOption), stop)
                     ? UpdaterPipe.OkReply
                     : UpdaterPipe.Format(_status);
 
@@ -74,26 +74,29 @@ public sealed class UpdateWorker : BackgroundService
         await _checkGate.WaitAsync(stop);
         try
         {
-            var installed = InstallLayout.InstalledVersion;
             var latest = await _github.LatestAsync(stop);
 
-            if (latest is null || !Versions.IsNewer(latest.Version, installed) || _failedVersions.Contains(latest.Version))
+            // A version that failed to install isn't offered again, until a newer one comes out.
+            if (latest is null
+                || !Versions.IsNewer(latest.Version, InstallLayout.InstalledVersion)
+                || latest.Version == InstallLayout.FailedVersion
+                || SetupPath is not { } path)
             {
                 _status = new UpdateStatus(UpdateState.None);
-                _readyPackage = null;
+                _ready = null;
                 return _status;
             }
 
-            var path = Path.Combine(DownloadsFolder, $"BluetoothAudioManager-{latest.Version}.zip");
+            // A newer download always replaces the one before, as there's only ever this one file.
+            PrepareUpdateFolder(Path.GetDirectoryName(path)!);
             await _github.DownloadAsync(latest, path, stop);
 
             if (_status.Version != latest.Version)
             {
                 UpdaterLog.Write($"Version {latest.Version} is downloaded and ready.");
-                DeleteOtherDownloads(path);
             }
 
-            _readyPackage = path;
+            _ready = latest;
             _status = new UpdateStatus(UpdateState.Ready, latest.Version);
             return _status;
         }
@@ -114,11 +117,15 @@ public sealed class UpdateWorker : BackgroundService
         }
     }
 
-    /// <summary>Starts installing the ready version, if there is one and the installed app is the one asking.</summary>
-    private bool StartInstall(PipeClient client, bool showWindow)
+    /// <summary>
+    /// Runs the downloaded installer to update, if a version is ready and the installed app is the one asking.
+    /// The installer waits for the app to close, stops this service, swaps in the new version, then starts the service
+    /// again and opens the app for the person who asked.
+    /// </summary>
+    private async Task<bool> StartInstallAsync(PipeClient client, bool showWindow, CancellationToken stop)
     {
-        if (_status is not { State: UpdateState.Ready, Version: { } version }
-            || _readyPackage is not { } package
+        if (_ready is not { } ready
+            || SetupPath is not { } path
             || InstallLayout.InstallFolder is not { } installFolder
             || !IsInstalledApp(client, installFolder)
             || Interlocked.Exchange(ref _installing, 1) == 1)
@@ -126,35 +133,39 @@ public sealed class UpdateWorker : BackgroundService
             return false;
         }
 
-        UpdaterLog.Write($"Installing version {version}, asked from session {client.SessionId}.");
-        _ = Task.Run(async () =>
+        try
         {
-            try
+            // Checked again just before it runs with administrator rights.
+            if (!await GitHubReleases.MatchesAsync(path, ready.Sha256, stop))
             {
-                await UpdateInstaller.InstallAppAsync(installFolder, package, version, CancellationToken.None);
+                UpdaterLog.Write($"The downloaded {ready.Version} installer changed, so it wasn't run.");
                 _status = new UpdateStatus(UpdateState.None);
-                _readyPackage = null;
-                UpdateInstaller.OpenApp(installFolder, client.SessionId, showWindow);
-
-                // Last, as it stops this service to replace it.
-                UpdateInstaller.ReplaceUpdater(installFolder, package);
+                _ready = null;
+                return false;
             }
-            catch (Exception exception)
+
+            var start = new ProcessStartInfo(path) { UseShellExecute = false, CreateNoWindow = true };
+            start.ArgumentList.Add(InstallLayout.UpdateArgument);
+            start.ArgumentList.Add(InstallLayout.SessionOption);
+            start.ArgumentList.Add(client.SessionId.ToString());
+            if (showWindow)
             {
-                UpdaterLog.Write($"Couldn't install version {version}: {exception.Message}");
-                _failedVersions.Add(version);
-                _status = new UpdateStatus(UpdateState.None);
-
-                // The app closed for the update, so the version that's still installed opens again.
-                UpdateInstaller.OpenApp(installFolder, client.SessionId, showWindow);
+                start.ArgumentList.Add(InstallLayout.WindowOption);
             }
-            finally
-            {
-                Interlocked.Exchange(ref _installing, 0);
-            }
-        });
 
-        return true;
+            Process.Start(start)?.Dispose();
+            UpdaterLog.Write($"Installing version {ready.Version}, asked from session {client.SessionId}.");
+            return true;
+        }
+        catch (Exception exception)
+        {
+            UpdaterLog.Write($"Couldn't start installing version {ready.Version}: {exception.Message}");
+            return false;
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _installing, 0);
+        }
     }
 
     // Only the installed app may ask for an install, not any program that finds the pipe.
@@ -164,22 +175,12 @@ public sealed class UpdateWorker : BackgroundService
             Path.Combine(InstallLayout.AppFolder(installFolder), InstallLayout.AppExeName),
             StringComparison.OrdinalIgnoreCase);
 
-    private static void DeleteOtherDownloads(string keep)
+    // Hidden, and only administrators and Windows may change it, as what's in it runs with administrator rights.
+    private static void PrepareUpdateFolder(string folder)
     {
-        foreach (var file in Directory.EnumerateFiles(DownloadsFolder))
-        {
-            if (!string.Equals(file, keep, StringComparison.OrdinalIgnoreCase))
-            {
-                try
-                {
-                    File.Delete(file);
-                }
-                catch (Exception)
-                {
-                    // Tried again after the next download.
-                }
-            }
-        }
+        SecureFolder.Ensure(folder);
+        var directory = new DirectoryInfo(folder);
+        directory.Attributes |= FileAttributes.Hidden;
     }
 
     public override void Dispose()

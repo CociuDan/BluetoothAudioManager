@@ -19,7 +19,12 @@ internal static class AppInstaller
     public static bool HasPackage => Assembly.GetExecutingAssembly().GetManifestResourceInfo(PackageResource) is not null;
 
     /// <summary>The installer's version, which is the package's, such as 0.0.3.</summary>
-    private static string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
+    public static string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
+
+    /// <summary>The package carried inside the installer: the app and the updater, zipped.</summary>
+    public static Stream OpenPackage() =>
+        Assembly.GetExecutingAssembly().GetManifestResourceStream(PackageResource)
+        ?? throw new InvalidOperationException("This copy of the installer has nothing to install.");
 
     /// <param name="progress">Told the share done, from 0 to 1.</param>
     public static void Install(string installFolder, IProgress<double> progress)
@@ -36,14 +41,16 @@ internal static class AppInstaller
             InstalledFiles.Remove(previous);
         }
 
-        // The updater's folder starts empty and locked down, so nothing put there beforehand can be installed by it.
+        // Only administrators and Windows may change these, as the updater runs what's in them with administrator rights.
+        // Program Files is already like that, but another folder chosen to install in may not be.
         SecureFolder.Ensure(InstallLayout.DataFolder);
-        DeleteFolder(Path.Combine(InstallLayout.DataFolder, "downloads"));
-        DeleteFolder(Path.Combine(InstallLayout.DataFolder, "staging"));
+        SecureFolder.Ensure(installFolder);
+
+        // A downloaded installer from before starts afresh, as this install may be newer.
+        DeleteFolder(InstallLayout.UpdateFolder(installFolder));
 
         progress.Report(0.05);
-        Directory.CreateDirectory(installFolder);
-        using (var package = Assembly.GetExecutingAssembly().GetManifestResourceStream(PackageResource)!)
+        using (var package = OpenPackage())
         using (var archive = new ZipArchive(package, ZipArchiveMode.Read))
         {
             PackageArchive.ExtractFolder(archive, InstallLayout.AppFolderName, InstallLayout.AppFolder(installFolder),
@@ -81,14 +88,15 @@ internal static class AppInstaller
         }
     }
 
-    // The app's own key, read by the app and the updater, and its entry in Installed apps.
-    private static void Register(string installFolder)
+    /// <summary>Writes the app's own key, read by the app and the updater, and its entry in Installed apps, for this version.</summary>
+    public static void Register(string installFolder)
     {
         using var machine = InstallLayout.OpenMachineKey();
         using (var key = machine.CreateSubKey(InstallLayout.RegistryKeyPath))
         {
             key.SetValue(InstallLayout.InstallFolderValue, installFolder);
             key.SetValue(InstallLayout.VersionValue, Version);
+            key.DeleteValue(InstallLayout.FailedVersionValue, throwOnMissingValue: false);
         }
 
         var appExe = Path.Combine(InstallLayout.AppFolder(installFolder), InstallLayout.AppExeName);
@@ -103,6 +111,21 @@ internal static class AppInstaller
         entry.SetValue("NoModify", 1, RegistryValueKind.DWord);
         entry.SetValue("NoRepair", 1, RegistryValueKind.DWord);
         entry.SetValue("EstimatedSize", (int)(FolderSize(installFolder) / 1024), RegistryValueKind.DWord);
+    }
+
+    /// <summary>Notes that this version failed to install, so the updater doesn't offer it again.</summary>
+    public static void RecordFailedVersion()
+    {
+        try
+        {
+            using var machine = InstallLayout.OpenMachineKey();
+            using var key = machine.CreateSubKey(InstallLayout.RegistryKeyPath);
+            key.SetValue(InstallLayout.FailedVersionValue, Version);
+        }
+        catch (Exception)
+        {
+            // Offered again then, which is no worse than before.
+        }
     }
 
     private static long FolderSize(string folder) =>

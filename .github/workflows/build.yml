@@ -1,8 +1,8 @@
-# Builds and tests the app in Release mode, makes its installer and update package, and publishes them as a GitHub release.
+# Builds and tests the app in Release mode, makes its installer, and publishes it as a GitHub release.
 # It runs only when started by hand: GitHub, the repository's Actions tab, "Build", "Run workflow".
 #
-# Each successful run gets a version, tags its commit with it, such as v0.0.3, and creates a release with the installer
-# and the package the installed updater downloads. Leave the version empty to take the highest tagged version and add 1
+# Each successful run gets a version, tags its commit with it, such as v0.0.3, and creates a release with the installer,
+# which the installed updater also downloads to update. Leave the version empty to take the highest tagged version and add 1
 # to its last number, or enter one, such as 2.0.0, to set it. Later runs then count up from there.
 name: Build
 # The title in the Actions list. A run without a version entered gets its number once it starts,
@@ -82,8 +82,8 @@ jobs:
       - name: Test
         run: dotnet test BluetoothAudioManager.slnx --configuration Release --no-build --verbosity normal
 
-      # The release package: the app and the updater service, each self-contained so they need nothing installed,
-      # zipped with its SHA-256 checksum. The installer carries it, and the installed updater downloads it for updates.
+      # The app and the updater service, each self-contained so they need nothing installed, zipped for the installer
+      # to carry. The zip only goes into the installer, not the release.
       # The update token from the repository's secrets is built into the updater, which downloads from the private repository.
       - name: Make the package
         shell: pwsh
@@ -98,14 +98,10 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           dotnet publish BluetoothAudioManager.Updater --configuration Release --output package/updater -p:Version=$env:VERSION
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Compress-Archive -Path package/app, package/updater -DestinationPath package/BluetoothAudioManager.zip
 
-          New-Item -ItemType Directory -Force release | Out-Null
-          $zip = "release/BluetoothAudioManager-$env:VERSION.zip"
-          Compress-Archive -Path package/app, package/updater -DestinationPath $zip
-          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  BluetoothAudioManager-$env:VERSION.zip" | Set-Content -NoNewline -Encoding ascii "$zip.sha256"
-
-      # The one installer people download, carrying the package. Self-contained in a single file, so it needs nothing installed.
+      # The release's one file: the installer, carrying the package, self-contained in a single file so it needs nothing
+      # installed. The installed updater downloads this same file and runs it to update.
       - name: Make the installer
         shell: pwsh
         env:
@@ -113,8 +109,9 @@ jobs:
         run: |
           dotnet publish BluetoothAudioManager.Installer --configuration Release --output installer `
             -p:Version=$env:VERSION `
-            -p:AppPackage="$PWD/release/BluetoothAudioManager-$env:VERSION.zip"
+            -p:AppPackage="$PWD/package/BluetoothAudioManager.zip"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory -Force release | Out-Null
           Copy-Item installer/BluetoothAudioManager.Installer.exe release/BluetoothAudioManager-Setup.exe
 
       # After everything that can fail, so only a build that passed takes up a version.
@@ -123,14 +120,12 @@ jobs:
           git tag v${{ steps.version.outputs.number }}
           git push origin v${{ steps.version.outputs.number }}
 
-      # Shown in the Releases box on the repository's main page, with the installer, and the package and checksum
-      # the installed updater downloads. The notes list the changes since the previous release.
+      # Shown in the Releases box on the repository's main page, with the installer. GitHub lists its SHA-256 checksum,
+      # which the updater checks downloads against. The notes list the changes since the previous release.
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: >
           gh release create v${{ steps.version.outputs.number }}
           release/BluetoothAudioManager-Setup.exe
-          release/BluetoothAudioManager-${{ steps.version.outputs.number }}.zip
-          release/BluetoothAudioManager-${{ steps.version.outputs.number }}.zip.sha256
           --title v${{ steps.version.outputs.number }} --generate-notes --verify-tag

@@ -4,8 +4,8 @@ namespace BluetoothAudioManager.Shared.Helpers;
 
 /// <summary>
 /// Where the installed app keeps its parts. The install folder, such as C:\Program Files\BluetoothAudioManager, holds
-/// the app and the updater in folders of their own, and the uninstaller. Downloads and the updater's settings are in
-/// C:\ProgramData\BluetoothAudioManager, which only administrators can change.
+/// the app and the updater in folders of their own, the uninstaller, and the latest version's installer in a hidden
+/// folder. The updater's settings and log are in C:\ProgramData\BluetoothAudioManager. Only administrators can change either.
 /// </summary>
 public static class InstallLayout
 {
@@ -23,6 +23,24 @@ public static class InstallLayout
 
     /// <summary>Starts the app hidden in the tray, as when starting with Windows.</summary>
     public const string TrayArgument = "--tray";
+
+    /// <summary>The release's one file: the installer, which the updater also downloads and runs to update.</summary>
+    public const string SetupFileName = "BluetoothAudioManager-Setup.exe";
+
+    /// <summary>The hidden folder in the install folder where the updater keeps the latest version's installer.</summary>
+    public const string UpdateFolderName = ".update";
+
+    /// <summary>Runs the installer without pages, to update the installed app, as the updater does.</summary>
+    public const string UpdateArgument = "--update";
+
+    /// <summary>Followed by a Windows session number: the session to open the app in after updating.</summary>
+    public const string SessionOption = "--session";
+
+    /// <summary>Opens the app after updating with its window showing, rather than in the tray.</summary>
+    public const string WindowOption = "--window";
+
+    /// <summary>A version that failed to install, so the updater doesn't offer it again.</summary>
+    public const string FailedVersionValue = "FailedVersion";
 
     /// <summary>The app's own key, under HKEY_LOCAL_MACHINE, with the install folder and version.</summary>
     public const string RegistryKeyPath = @"SOFTWARE\BluetoothAudioManager";
@@ -48,6 +66,11 @@ public static class InstallLayout
     public static string AppFolder(string installFolder) => Path.Combine(installFolder, AppFolderName);
 
     public static string UpdaterFolder(string installFolder) => Path.Combine(installFolder, UpdaterFolderName);
+
+    public static string UpdateFolder(string installFolder) => Path.Combine(installFolder, UpdateFolderName);
+
+    /// <summary>The version that last failed to install, or null if none has.</summary>
+    public static string? FailedVersion => ReadValue(FailedVersionValue);
 
     /// <summary>Whether this process is the installed app, rather than a build run from the code.</summary>
     public static bool IsInstalledApp() =>

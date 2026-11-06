@@ -23,9 +23,7 @@ internal static class UpdaterService
         // Started again by Windows if it ever stops unexpectedly.
         RunSc("failure", InstallLayout.ServiceName, "reset=", "86400", "actions=", "restart/60000/restart/60000/restart/60000");
 
-        using var service = new ServiceController(InstallLayout.ServiceName);
-        service.Start();
-        service.WaitForStatus(ServiceControllerStatus.Running, ServiceTimeout);
+        Start();
     }
 
     /// <summary>Stops and removes the service, if it's there.</summary>
@@ -33,12 +31,7 @@ internal static class UpdaterService
     {
         try
         {
-            using var service = new ServiceController(InstallLayout.ServiceName);
-            if (service.Status != ServiceControllerStatus.Stopped)
-            {
-                service.Stop();
-                service.WaitForStatus(ServiceControllerStatus.Stopped, ServiceTimeout);
-            }
+            Stop();
         }
         catch (InvalidOperationException)
         {
@@ -51,6 +44,32 @@ internal static class UpdaterService
         }
 
         RunSc("delete", InstallLayout.ServiceName);
+    }
+
+    /// <summary>Stops the service and waits until its program has closed, so its files can be replaced.</summary>
+    public static void Stop()
+    {
+        using var service = new ServiceController(InstallLayout.ServiceName);
+        if (service.Status != ServiceControllerStatus.Stopped)
+        {
+            service.Stop();
+            service.WaitForStatus(ServiceControllerStatus.Stopped, ServiceTimeout);
+        }
+
+        foreach (var process in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(InstallLayout.UpdaterExeName)))
+        {
+            using (process)
+            {
+                process.WaitForExit(ServiceTimeout);
+            }
+        }
+    }
+
+    public static void Start()
+    {
+        using var service = new ServiceController(InstallLayout.ServiceName);
+        service.Start();
+        service.WaitForStatus(ServiceControllerStatus.Running, ServiceTimeout);
     }
 
     private static void RunSc(params string[] arguments)

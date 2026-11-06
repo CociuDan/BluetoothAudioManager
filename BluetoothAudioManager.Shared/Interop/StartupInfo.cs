@@ -1,10 +1,10 @@
 using System.Runtime.InteropServices;
 
-namespace BluetoothAudioManager.Updater.Interop;
+namespace BluetoothAudioManager.Shared.Interop;
 
 /// <summary>Windows' STARTUPINFOW, for starting the app in a user's session.</summary>
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-internal struct StartupInfo
+public struct StartupInfo
 {
     public int Size;
     public string? Reserved;

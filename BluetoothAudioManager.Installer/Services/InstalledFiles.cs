@@ -7,13 +7,21 @@ namespace BluetoothAudioManager.Installer.Services;
 internal static class InstalledFiles
 {
     /// <summary>
-    /// Removes the app, the updater and the uninstaller from the folder, with any folders left over from an update,
-    /// then the folder itself if nothing else is in it.
+    /// Removes the app, the updater, the downloaded installer and the uninstaller from the folder, with any folders
+    /// left over from an update, then the folder itself if nothing else is in it.
     /// </summary>
     public static void Remove(string installFolder)
     {
         var appFolder = InstallLayout.AppFolder(installFolder);
-        foreach (var folder in new[] { appFolder, appFolder + ".new", appFolder + ".old", InstallLayout.UpdaterFolder(installFolder) })
+        var updaterFolder = InstallLayout.UpdaterFolder(installFolder);
+        string[] folders =
+        [
+            appFolder, .. FolderSwap.Leftovers(appFolder),
+            updaterFolder, .. FolderSwap.Leftovers(updaterFolder),
+            InstallLayout.UpdateFolder(installFolder),
+        ];
+
+        foreach (var folder in folders)
         {
             if (Directory.Exists(folder))
             {

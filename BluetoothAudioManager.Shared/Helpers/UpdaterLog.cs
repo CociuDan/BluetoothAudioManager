@@ -1,6 +1,4 @@
-using BluetoothAudioManager.Shared.Helpers;
-
-namespace BluetoothAudioManager.Updater.Services;
+namespace BluetoothAudioManager.Shared.Helpers;
 
 /// <summary>
 /// A short log of what the updater did, in C:\ProgramData\BluetoothAudioManager\updater.log, for checking that updates work.

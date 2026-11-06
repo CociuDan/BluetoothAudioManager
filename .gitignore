@@ -429,10 +429,8 @@ FodyWeavers.xsd
 
 
 # Release builds come from the GitHub Actions pipeline, so none of their output is committed.
-# The pipeline writes the app and updater to package/, the installer to installer/, and the release files to release/.
+# The pipeline writes the app, the updater and their zip to package/, the installer to installer/, and the release file to release/.
 package/
 installer/
 release/
 *-Setup.exe
-BluetoothAudioManager-*.zip
-BluetoothAudioManager-*.zip.sha256

@@ -1,13 +1,15 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using BluetoothAudioManager.Installer.Services;
 using BluetoothAudioManager.Installer.Views;
 using BluetoothAudioManager.Shared.Helpers;
 
 namespace BluetoothAudioManager.Installer;
 
 /// <summary>
-/// Installs the app, or uninstalls it when started with --uninstall, as Installed apps and the Start menu shortcut do.
+/// Installs the app, uninstalls it when started with --uninstall, as Installed apps and the Start menu shortcut do,
+/// or updates it without any pages when started with --update, as the updater service does.
 /// </summary>
 public partial class App : Application
 {
@@ -16,6 +18,14 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Run by the updater service to update, without any pages.
+        if (e.Args.Contains(InstallLayout.UpdateArgument))
+        {
+            SilentUpdate.Run(SessionFrom(e.Args), e.Args.Contains(InstallLayout.WindowOption));
+            Shutdown();
+            return;
+        }
 
         if (!e.Args.Contains(UninstallArgument))
         {
@@ -34,6 +44,13 @@ public partial class App : Application
         }
 
         new UninstallWindow().Show();
+    }
+
+    // The number after --session, if there's a valid one.
+    private static uint? SessionFrom(string[] args)
+    {
+        var index = Array.IndexOf(args, InstallLayout.SessionOption);
+        return index >= 0 && index + 1 < args.Length && uint.TryParse(args[index + 1], out var session) ? session : null;
     }
 
     private static bool IsInInstallFolder() =>
