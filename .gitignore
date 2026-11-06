@@ -427,3 +427,14 @@ FodyWeavers.xsd
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
 
+
+# Release builds come from the GitHub Actions pipeline, so none of their output is committed.
+# dotnet publish writes to publish/ and vpk pack to Releases/, which the rules above already ignore.
+# These catch Velopack's files wherever they're written.
+*-Setup.exe
+*-Portable.zip
+*-full.nupkg
+*-delta.nupkg
+RELEASES
+releases.*.json
+assets.*.json
