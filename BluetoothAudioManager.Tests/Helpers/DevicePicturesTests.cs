@@ -5,6 +5,16 @@ namespace BluetoothAudioManager.Tests.Helpers;
 public class DevicePicturesTests
 {
     [Theory]
+    [InlineData("AirPods Max", "Apple")]
+    [InlineData("MAJOR IV", "Marshall")]
+    [InlineData("LinkBuds", "Sony")]
+    [InlineData("Jabra Evolve 65", "Jabra")]
+    public void For_AssociatesPictureWithBrandFolder(string deviceName, string expectedFolder)
+    {
+        Assert.Equal(expectedFolder, DevicePictures.For(deviceName)?.AssetFolder);
+    }
+
+    [Theory]
     [InlineData("MAJOR IV", "MajorIV.png")]
     [InlineData("Marshall Major IV", "MajorIV.png")]
     [InlineData("AirPods Max", "AirPodsMax.png")]
@@ -55,7 +65,44 @@ public class DevicePicturesTests
     }
 
     [Theory]
-    [InlineData("WH-1000XM5")]
+    [InlineData("WH-1000XM4", "WH1000XM4.png")]
+    [InlineData("LE_WH-1000XM4", "WH1000XM4.png")]
+    [InlineData("WH-1000XM4C", "WH1000XM4C.png")]
+    [InlineData("WH-1000XM5", "WH1000XM5.png")]
+    [InlineData("1000X THE COLLEXION", "Sony1000XTheCollexion.png")]
+    [InlineData("h.ear (MDR-100ABN)", "MDR100ABN.png")]
+    [InlineData("WH-H910N (h.ear)", "WHH910N.png")]
+    [InlineData("LE_WH-H810 (h.ear)", "WHH810.png")]
+    [InlineData("WH-CH735N", "WHCH730N.png")]
+    [InlineData("ULT WEAR", "ULTWear.png")]
+    [InlineData("INZONE H9", "InzoneH9.png")]
+    [InlineData("INZONE H9 II", "InzoneH9II.png")]
+    public void FileFor_FindsSonyHeadphones(string deviceName, string expected)
+    {
+        Assert.Equal(expected, DevicePictures.FileFor(deviceName));
+    }
+
+    [Theory]
+    [InlineData("WF-1000XM4", "WF1000XM4")]
+    [InlineData("LE_WF-SP800N", "WFSP800N")]
+    [InlineData("WF-H800 (h.ear)", "WFH800")]
+    [InlineData("LinkBuds", "LinkBuds")]
+    [InlineData("LinkBuds S", "LinkBudsS")]
+    [InlineData("LinkBuds Fit", "LinkBudsFit")]
+    [InlineData("INZONE Buds", "InzoneBuds")]
+    public void For_SonyEarbuds_GivesBudsAndCase(string deviceName, string model)
+    {
+        var picture = DevicePictures.For(deviceName);
+
+        Assert.NotNull(picture);
+        Assert.True(picture.IsEarbuds);
+        Assert.Equal($"{model}-L.png", picture.LeftBud);
+        Assert.Equal($"{model}-case.png", picture.Case);
+    }
+
+    [Theory]
+    [InlineData("WH-1000XM9")]
+    [InlineData("LE_")]
     [InlineData("Jabra Link 380")]
     [InlineData("Midnight Buds")]
     [InlineData("MONITOR")]

@@ -24,7 +24,7 @@
 
   <ItemGroup>
     <Resource Include="Assets\TrayIcon.ico" />
-    <Resource Include="Assets\*.png" />
+    <Resource Include="Assets\**\*.png" />
     <!-- Only the tray icon uses Windows Forms, so its names shouldn't clash with WPF's across the app. -->
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />

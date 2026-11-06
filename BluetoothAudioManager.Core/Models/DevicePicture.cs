@@ -6,11 +6,13 @@ namespace BluetoothAudioManager.Core.Models;
 /// </summary>
 public sealed record DevicePicture(string? FileName, string? LeftBud = null, string? RightBud = null, string? Case = null)
 {
+    public string AssetFolder { get; init; } = "";
+
     public bool IsEarbuds => LeftBud is not null && RightBud is not null;
 
-    public static DevicePicture Headphones(string fileName) => new(fileName);
+    public static DevicePicture Headphones(string assetFolder, string fileName) => new(fileName) { AssetFolder = assetFolder };
 
     /// <summary>Earbuds whose pictures are named after the model: Model-L.png, Model-R.png and Model-case.png.</summary>
-    public static DevicePicture Earbuds(string model, bool hasCase = true) =>
-        new(null, $"{model}-L.png", $"{model}-R.png", hasCase ? $"{model}-case.png" : null);
+    public static DevicePicture Earbuds(string assetFolder, string model, bool hasCase = true) =>
+        new(null, $"{model}-L.png", $"{model}-R.png", hasCase ? $"{model}-case.png" : null) { AssetFolder = assetFolder };
 }
