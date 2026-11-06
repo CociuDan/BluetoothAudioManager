@@ -74,9 +74,31 @@ public partial class MainWindow : Window
     /// <summary>Raised with the title and message to show when a battery runs low.</summary>
     public event Action<string, string>? LowBatteryAlert;
 
+    /// <summary>Raised when Update now is clicked in the update bar.</summary>
+    public event Action? UpdateClicked;
+
+    /// <summary>Whether ear detection paused media that it will resume when the pods go back in.</summary>
+    public bool HasPausedMedia => _pausedApps.Count > 0;
+
+    // The update bar's height with its margin, when it's showing.
+    private double UpdateBarHeight
+    {
+        get
+        {
+            if (UpdateBar.Visibility != Visibility.Visible)
+            {
+                return 0;
+            }
+
+            UpdateBar.Measure(new Size(Width - WindowEdges, double.PositiveInfinity));
+            return UpdateBar.DesiredSize.Height;
+        }
+    }
+
     public MainWindow()
     {
         InitializeComponent();
+        WindowBackdrop.Transparency = _settings.Transparency;
         WindowBackdrop.Follow(this, Surface);
 
         _monitor.StatusReceived += status => Dispatcher.BeginInvoke(() => OnStatusReceived(status));
@@ -106,6 +128,7 @@ public partial class MainWindow : Window
             {
                 ShowSettings(false);
                 _otherRows.ForEach(row => row.ShowSettings(false));
+                ShowAppSettings(false);
             }
         };
         ShowEarDetectionSetting();
@@ -172,6 +195,18 @@ public partial class MainWindow : Window
 
     /// <summary>Lets the window really close, for when the app exits or Windows shuts down.</summary>
     public void AllowClose() => _closeAllowed = true;
+
+    /// <summary>Shows the bar offering to install a downloaded update.</summary>
+    public void ShowUpdateReady(string version)
+    {
+        UpdateText.Text = $"Version {version} is ready";
+        UpdateBar.Visibility = Visibility.Visible;
+
+        if (IsVisible)
+        {
+            SizeToDevices();
+        }
+    }
 
     private async void RefreshDevices()
     {
@@ -498,7 +533,7 @@ public partial class MainWindow : Window
 
         if (NoDevicesPanel.Visibility == Visibility.Visible)
         {
-            _smallestHeight = _allDevicesHeight = defaultHeight = NoDevicesHeight;
+            _smallestHeight = _allDevicesHeight = defaultHeight = NoDevicesHeight + UpdateBarHeight;
         }
         else
         {
@@ -508,7 +543,7 @@ public partial class MainWindow : Window
 
             double HeightOfRows(int count) => Math.Ceiling(
                 rows.Take(count).Sum(row => row.DesiredSize.Height)
-                + DevicesPanel.Margin.Top + DevicesPanel.Margin.Bottom + TitleBarHeight + WindowEdges);
+                + DevicesPanel.Margin.Top + DevicesPanel.Margin.Bottom + TitleBarHeight + UpdateBarHeight + WindowEdges);
 
             _smallestHeight = HeightOfRows(1);
             _allDevicesHeight = HeightOfRows(rows.Count);
@@ -648,6 +683,28 @@ public partial class MainWindow : Window
     private void CaptionBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DragMove();
 
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Hide();
+
+    private void UpdateButton_Click(object sender, RoutedEventArgs e) => UpdateClicked?.Invoke();
+
+    private void SettingsButton_Click(object sender, RoutedEventArgs e) => ShowAppSettings(AppSettingsArea.Visibility != Visibility.Visible);
+
+    // The app's settings take the devices' place, and the gear stays highlighted while they're open.
+    private void ShowAppSettings(bool open)
+    {
+        if (open)
+        {
+            AppSettingsView.Show(_settings);
+            AppSettingsArea.ScrollToTop();
+            SettingsButton.SetResourceReference(BackgroundProperty, "SubtleFillColorSecondaryBrush");
+        }
+        else
+        {
+            SettingsButton.ClearValue(BackgroundProperty);
+        }
+
+        AppSettingsArea.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+        DevicesView.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
+    }
 
     private void PositionInCorner()
     {

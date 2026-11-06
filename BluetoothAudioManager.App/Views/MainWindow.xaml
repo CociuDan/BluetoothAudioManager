@@ -63,6 +63,7 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="32" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
@@ -71,19 +72,65 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="Bluetooth Audio Manager" Margin="30,0,0,0" FontSize="12" VerticalAlignment="Center" />
-                <Button Grid.Column="1" Style="{StaticResource CloseCaptionButton}" Content="&#xE8BB;"
-                        Click="CloseButton_Click" ToolTip="Hide" AutomationProperties.Name="Hide" />
+                <!-- The logo starts where the window's contents do, with the name after it. -->
+                <StackPanel Orientation="Horizontal" Margin="30,0,0,0" VerticalAlignment="Center">
+                    <local:AppLogo Width="16" Height="16" />
+                    <TextBlock Text="Bluetooth Audio Manager" Margin="8,0,0,0" FontSize="12" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <!-- The same size as the X, with the device rows' settings glyph. Highlighted while the settings are open. -->
+                    <Button x:Name="SettingsButton" Style="{StaticResource CaptionButton}" Content="&#xE713;" FontSize="13"
+                            Click="SettingsButton_Click" ToolTip="Settings" AutomationProperties.Name="Settings" />
+                    <Button Style="{StaticResource CloseCaptionButton}" Content="&#xE8BB;"
+                            Click="CloseButton_Click" ToolTip="Hide" AutomationProperties.Name="Hide" />
+                </StackPanel>
             </Grid>
 
-            <StackPanel x:Name="NoDevicesPanel" Grid.Row="1" Margin="30,40,20,20" Visibility="Collapsed">
+            <!-- Shown while a downloaded update is ready to install. -->
+            <Border x:Name="UpdateBar" Grid.Row="1" Visibility="Collapsed" Margin="30,4,20,0" Padding="12,8,8,8"
+                    CornerRadius="6" BorderThickness="1"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Path Width="16" Height="16" VerticalAlignment="Center" Data="M8,2 V10 M4.5,6.5 L8,10 L11.5,6.5 M3,13 H13"
+                          Stroke="{DynamicResource AccentFillColorDefaultBrush}" StrokeThickness="1.5"
+                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+                    <TextBlock x:Name="UpdateText" Grid.Column="1" Margin="10,0" FontSize="13" VerticalAlignment="Center" />
+                    <Button Grid.Column="2" Content="Update now" Height="30" Padding="14,0" FontSize="13"
+                            Click="UpdateButton_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border CornerRadius="4" Background="{DynamicResource AccentFillColorDefaultBrush}">
+                                    <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      TextElement.Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- The app's settings, in place of the devices while the gear is on. -->
+            <ScrollViewer x:Name="AppSettingsArea" Grid.Row="2" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                <local:AppSettingsPanel x:Name="AppSettingsView" Margin="30,16,20,20" />
+            </ScrollViewer>
+
+            <!-- Hidden as a whole while the settings are open, so the devices and the no-devices message keep their own state. -->
+            <Grid x:Name="DevicesView" Grid.Row="2">
+            <StackPanel x:Name="NoDevicesPanel" Margin="30,40,20,20" Visibility="Collapsed">
                 <TextBlock Text="No paired headphones found" FontSize="16" FontWeight="SemiBold" TextAlignment="Center" />
                 <TextBlock Text="Pair them in Windows' Bluetooth settings and they'll appear here." FontSize="12"
                            Margin="0,4,0,0" TextAlignment="Center" TextWrapping="Wrap"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </StackPanel>
 
-            <ScrollViewer x:Name="DevicesScroller" Grid.Row="1" VerticalScrollBarVisibility="Disabled">
+            <ScrollViewer x:Name="DevicesScroller" VerticalScrollBarVisibility="Disabled">
             <Grid x:Name="DevicesArea">
             <!--
                 The left margin is 8, plus 22 inside each row for the drag handle, so content still starts 30 from the edge.
@@ -152,11 +199,12 @@
             </StackPanel>
             </Grid>
             </ScrollViewer>
+            </Grid>
 
             <!-- The window has no Windows border to drag, so these edges resize it. The top one stops short of the X button. -->
-            <Thumb Grid.RowSpan="2" Style="{StaticResource ResizeEdge}" Height="5" VerticalAlignment="Top" Margin="0,0,46,0"
+            <Thumb Grid.RowSpan="3" Style="{StaticResource ResizeEdge}" Height="5" VerticalAlignment="Top" Margin="0,0,46,0"
                    DragDelta="TopEdge_DragDelta" DragCompleted="ResizeEdge_DragCompleted" />
-            <Thumb Grid.RowSpan="2" Style="{StaticResource ResizeEdge}" Height="5" VerticalAlignment="Bottom"
+            <Thumb Grid.RowSpan="3" Style="{StaticResource ResizeEdge}" Height="5" VerticalAlignment="Bottom"
                    DragDelta="BottomEdge_DragDelta" DragCompleted="ResizeEdge_DragCompleted" />
         </Grid>
     </Border>

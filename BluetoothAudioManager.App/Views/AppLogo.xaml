@@ -1,0 +1,15 @@
+<UserControl x:Class="BluetoothAudioManager.App.Views.AppLogo"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Focusable="False">
+    <!--
+        The app icon from Assets/AppIcon.svg, drawn for the title bar: a gray speaker with a gap cut around the Bluetooth symbol,
+        and the symbol in the text color, so it shows in both themes. Sized by Width and Height.
+    -->
+    <Viewbox>
+        <Canvas Width="24" Height="24">
+            <Path x:Name="SpeakerPath" Fill="#8A8A8A" />
+            <Path x:Name="SymbolPath" Fill="{DynamicResource TextFillColorPrimaryBrush}" />
+        </Canvas>
+    </Viewbox>
+</UserControl>

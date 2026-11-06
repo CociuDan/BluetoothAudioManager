@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using BluetoothAudioManager.App.Services;
 
 namespace BluetoothAudioManager.App.Models;
 
@@ -28,6 +29,9 @@ public sealed class AppSettings
 
     /// <summary>Low battery settings for other headphones, by their Windows name.</summary>
     public Dictionary<string, DeviceLowBattery> DeviceLowBattery { get; set; } = [];
+
+    /// <summary>How see-through the window is, in percent: 0 is solid, and 100 is the most allowed, so it's never fully see-through.</summary>
+    public int Transparency { get; set; } = WindowBackdrop.DefaultTransparency;
 
     /// <summary>
     /// The partner key Jabra gives registered developers, which its kit needs to read Jabra headsets' battery levels.

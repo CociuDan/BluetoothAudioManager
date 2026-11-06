@@ -1,5 +1,6 @@
 using System.IO;
 using System.Reflection;
+using BluetoothAudioManager.Shared.Helpers;
 using Microsoft.Win32;
 
 namespace BluetoothAudioManager.App.Services;
@@ -7,7 +8,7 @@ namespace BluetoothAudioManager.App.Services;
 /// <summary>Turns starting with Windows on or off for the current user.</summary>
 internal static class StartupRegistration
 {
-    public const string TrayArgument = "--tray";
+    public const string TrayArgument = InstallLayout.TrayArgument;
 
     private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string ValueName = "BluetoothAudioManager";

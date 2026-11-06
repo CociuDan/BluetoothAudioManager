@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The single installer people download. It installs the app and the updater service, by default in Program Files,
+    and a copy of it in the install folder is the uninstaller. Published as one self-contained file, so it needs nothing installed.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>..\BluetoothAudioManager.App\Assets\AppIcon.ico</ApplicationIcon>
+    <!-- Asks Windows for administrator rights as it opens, which installing in Program Files and setting up the service need. -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyTitle>Bluetooth Audio Manager setup</AssemblyTitle>
+    <!-- Self-contained needs a runtime named, so Windows on x64, like the app. -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <!-- WPF's native parts go inside the one file too, and everything is compressed to keep the download smaller. -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BluetoothAudioManager.Shared\BluetoothAudioManager.Shared.csproj" />
+  </ItemGroup>
+
+  <!-- The pipeline sets AppPackage to the release's zip of the app and the updater. A build without it has nothing to install. -->
+  <ItemGroup Condition="'$(AppPackage)' != ''">
+    <EmbeddedResource Include="$(AppPackage)" LogicalName="AppPackage.zip" />
+  </ItemGroup>
+
+</Project>

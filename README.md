@@ -53,9 +53,36 @@ The headphones button to the left of Connect makes that device the system sound 
 
 ### System tray
 
-The app runs from the system tray, where its icon is a Bluetooth symbol in front of a gray speaker. The window and the program file use the same icon, drawn in `Assets/TrayIcon.svg` and `Assets/AppIcon.svg`, which the `.ico` files are made from. Click the tray icon to show or hide the window above the bottom-right of the taskbar. Clicking elsewhere or pressing the window's X hides it, and the app keeps running. Right-click the icon for **Start with Windows** and **Exit**.
+The app runs from the system tray, where its icon is a Bluetooth symbol in front of a gray speaker. The window and the program file use the same icon, drawn in `Assets/TrayIcon.svg` and `Assets/AppIcon.svg`, which the `.ico` files are made from. Click the tray icon to show or hide the window above the bottom-right of the taskbar. Clicking elsewhere or pressing the window's X hides it, and the app keeps running. Right-click the icon for **Start with Windows**, **Check for updates** and the installed version, and **Exit**.
 
-Starting with Windows opens the app hidden in the tray. The setting stores the path of the build you turned it on from, so turn it on again if that build moves.
+The gear next to the window's X shows the app's settings in place of the devices, and clicking it again goes back. **Start with Windows** there is the same setting as in the tray menu. **Transparency** sets how see-through the window is, from solid to 100% in steps of 5%, and is 25% by default. It never goes further, so the window always stays a frosted panel behind its contents. It applies straight away, also to the card lifted while dragging a device, and is saved with the other settings.
+
+Starting with Windows opens the app hidden in the tray. The setting stores the path of the build you turned it on from, so turn it on again if that build moves. The installed app keeps the same path through updates, and uninstalling it turns the setting off for everyone.
+
+### Install and updates
+
+Install the app by running `BluetoothAudioManager-Setup.exe` from the latest release. It's one file that needs nothing else installed, not even .NET. Windows asks for administrator permission once, as it opens. Its page asks where to install, with `C:\Program Files\BluetoothAudioManager` filled in, or the folder it's already in. Picking a folder with **Browse…** installs into a `BluetoothAudioManager` folder inside it. **Install** then shows its progress page while it copies the app, adds Start menu shortcuts for the app and its uninstaller, adds an entry in **Installed apps**, and sets up the updater. Then it opens the app, without administrator rights. It's installed for everyone on the PC. Running a newer installer over it replaces it. The installer isn't signed, so Windows SmartScreen may warn about it the first time: choose **More info**, then **Run anyway**.
+
+The install folder holds `app`, the app itself, `updater`, the updater service, and `Uninstall.exe`, a copy of the installer. The installer is its own small app, in `BluetoothAudioManager.Installer`, and carries the release's package inside it. A copy built anywhere but the pipeline has nothing inside to install, and says so.
+
+**Updates.** Programs in Program Files can only be changed with administrator rights, so a Windows service, **Bluetooth Audio Manager Updater** in `BluetoothAudioManager.Updater`, does it. It starts with Windows and checks the latest release when it starts and every 4 hours. To change how often, set `CheckEveryMinutes`, at least 1, in `C:\ProgramData\BluetoothAudioManager\updater.json`, which it reads before each wait. **Check for updates** in the tray menu checks straight away, and says if there's nothing new or GitHub can't be reached. The updater downloads a new version's package to `C:\ProgramData\BluetoothAudioManager\downloads`, and checks it against the release's SHA-256 checksum. Only administrators and Windows can change that folder. It writes what it does to `updater.log` beside it.
+
+The app asks the updater every minute whether a version is ready. Then a Windows notification offers **Update now** and **Later**, the tray menu gets **Update to *version*** at the top, and the window shows a bar with **Update now**. Updating closes the app, the updater swaps in the new version, puts the old one back if that fails, and opens the app again for you within a few seconds, with the window showing if it was. If someone else signed in to the PC has the app open, the update waits until they close it. Only the app restarts: connected headphones stay connected, the sound output stays the same and playing audio carries on, as Windows holds those, not the app. If ear detection has paused media, the update waits until it resumes, so the pause isn't forgotten. After **Later**, the update installs the next time the app starts, before its window opens. The updater then replaces itself with the new version's updater. If it can't reach GitHub, it shows nothing and tries again at the next check. The app only asks for the status, a check, or the install of what the updater downloaded and checked itself, and only the installed app can ask for an install, so nothing can use the updater to run its own files with administrator rights. Builds that weren't installed, like one run from the code, never ask.
+
+**Uninstalling.** Uninstall from **Installed apps**, or with **Uninstall Bluetooth Audio Manager** in the Start menu. After Windows asks for permission, its page lists what goes, and **Uninstall** closes the app for everyone and removes:
+
+- the app, the updater service, and the downloads, settings and log in `C:\ProgramData\BluetoothAudioManager`
+- the shortcuts, the entry in Installed apps, and the app's keys in the registry
+- for everyone on the PC, including people who aren't signed in: their settings in `%AppData%\BluetoothAudioManager`, their **Start with Windows** entry, and what Windows keeps for the app's notifications
+
+Bluetooth pairings and the sound output stay, as they belong to Windows. Only the app's own files are removed from the install folder, then the folder if it's empty. The uninstaller runs from a temporary copy, which Windows deletes when it next restarts.
+
+The repository is private, so the updater downloads releases with a read-only GitHub token built in by the pipeline. It's never in the code, and the app doesn't carry it. To set it up:
+
+1. On GitHub, open **Settings**, **Developer settings**, **Personal access tokens**, **Fine-grained tokens**, then **Generate new token**. Give it access to only this repository, with **Contents** set to **Read-only**, and copy it.
+2. In this repository, open **Settings**, **Secrets and variables**, **Actions**, then **New repository secret**. Name it `UPDATE_TOKEN` and paste the token.
+
+The Build workflow stops if the secret is missing. Anyone with the installed app could take the token out of the updater and read this repository, though not change it. Before the token expires, make a new one, replace the secret and run Build: installed copies download that update with the old token and get the new one with it. A copy that stays offline until the old token expires has to be installed again by hand.
 
 ### Product images
 
@@ -87,8 +114,8 @@ dotnet test
 
 ## Build on GitHub
 
-The **Build** workflow in `.github/workflows/build.yml` builds the app in Release mode on a GitHub-hosted Windows machine, runs the tests, and publishes a self-contained app that runs without .NET installed. Start it from the repository's **Actions** tab: choose **Build**, then **Run workflow**. When it finishes, the run's page has a **BluetoothAudioManager-*version*-win-x64** download, kept for 7 days. Unzip it and run `BluetoothAudioManager.App.exe`. Build output is never committed.
+The **Build** workflow in `.github/workflows/build.yml` builds the app in Release mode on a GitHub-hosted Windows machine, runs the tests, publishes the app and the updater self-contained so they run without .NET installed, zips them into the release package, and makes the installer. Start it from the repository's **Actions** tab: choose **Build**, then **Run workflow**. Build output is never committed.
 
 Each build that passes gets a version, which the app's files carry, and its commit is tagged with it, such as `v0.0.3`. Leave **Version** empty to add 1 to the last number of the highest version so far, starting at 0.0.1. To change it, enter a version such as `2.0.0` when you start the run, and later builds count up from there. A version can be used only once. A build that fails doesn't use up its version. Builds on your own PC are 1.0.0.
 
-Each version also gets a release, shown in the **Releases** box on the repository's main page, with the newest marked **Latest**. Its page lists the commits since the previous release and has the app as a zip, kept until you delete the release.
+Each version also gets a release, shown in the **Releases** box on the repository's main page, with the newest marked **Latest**. Its page lists the commits since the previous release. It has `BluetoothAudioManager-Setup.exe`, and the package `BluetoothAudioManager-version.zip` with its `.sha256` checksum, which the updater downloads. They're kept until you delete the release. The updater only looks at the latest release, so deleting it makes the one before it the latest.

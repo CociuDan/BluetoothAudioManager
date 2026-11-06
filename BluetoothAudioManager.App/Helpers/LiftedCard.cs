@@ -7,16 +7,13 @@ using BluetoothAudioManager.App.Services;
 namespace BluetoothAudioManager.App.Helpers;
 
 /// <summary>
-/// Makes a device row look lifted off the list while it's dragged: a card in the window's color at 60%,
-/// with the window's edge and a shadow, drawn above the other rows.
+/// Makes a device row look lifted off the list while it's dragged: a card in the window's color, 60% solid at the
+/// default transparency and following it, with the window's edge and a shadow, drawn above the other rows.
 /// </summary>
 public static class LiftedCard
 {
     // The card reaches this far past the row on the top, right and bottom, so the row's content keeps its place.
     private const double Overhang = 12;
-
-    private static readonly Brush DarkCard = new SolidColorBrush(Color.FromArgb(0x99, 0x20, 0x20, 0x20));
-    private static readonly Brush LightCard = new SolidColorBrush(Color.FromArgb(0x99, 0xF3, 0xF3, 0xF3));
 
     public static void Apply(Border card, bool lifted)
     {
@@ -33,7 +30,7 @@ public static class LiftedCard
 
         if (lifted)
         {
-            card.Background = WindowBackdrop.IsLight ? LightCard : DarkCard;
+            card.Background = WindowBackdrop.CardBackground;
             card.BorderBrush = WindowBackdrop.Edge;
         }
         else

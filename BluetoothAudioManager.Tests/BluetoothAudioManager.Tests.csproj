@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BluetoothAudioManager.Core\BluetoothAudioManager.Core.csproj" />
+    <ProjectReference Include="..\BluetoothAudioManager.Shared\BluetoothAudioManager.Shared.csproj" />
   </ItemGroup>
 
 </Project>

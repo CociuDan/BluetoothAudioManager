@@ -2,6 +2,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BluetoothAudioManager.Core\BluetoothAudioManager.Core.csproj" />
+    <ProjectReference Include="..\BluetoothAudioManager.Shared\BluetoothAudioManager.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Windows notifications with buttons, for the update. -->
+    <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -12,6 +18,8 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <!-- The name Windows shows for the program, such as on its notifications, and the uninstaller looks for. -->
+    <AssemblyTitle>Bluetooth Audio Manager</AssemblyTitle>
   </PropertyGroup>
 
   <ItemGroup>

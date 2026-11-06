@@ -429,12 +429,10 @@ FodyWeavers.xsd
 
 
 # Release builds come from the GitHub Actions pipeline, so none of their output is committed.
-# dotnet publish writes to publish/ and vpk pack to Releases/, which the rules above already ignore.
-# These catch Velopack's files wherever they're written.
+# The pipeline writes the app and updater to package/, the installer to installer/, and the release files to release/.
+package/
+installer/
+release/
 *-Setup.exe
-*-Portable.zip
-*-full.nupkg
-*-delta.nupkg
-RELEASES
-releases.*.json
-assets.*.json
+BluetoothAudioManager-*.zip
+BluetoothAudioManager-*.zip.sha256
