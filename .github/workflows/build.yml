@@ -1,12 +1,22 @@
 # Builds and tests the app in Release mode, and keeps the published app for a week to download and try.
 # It runs only when started by hand: GitHub, the repository's Actions tab, "Build", "Run workflow".
+#
+# Each successful run gets a version and tags its commit with it, such as v1.0.3.
+# Leave the version empty to take the highest tagged version and add 1 to its last number,
+# or enter one, such as 2.0.0, to set it. Later runs then count up from there.
 name: Build
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version, such as 2.0.0. Leave empty to add 1 to the last version."
+        required: false
+        default: ""
 
 permissions:
-  contents: read
+  # Write access is needed to push the version tag.
+  contents: write
 
 jobs:
   build:
@@ -15,6 +25,44 @@ jobs:
     steps:
       - name: Check out the code
         uses: actions/checkout@v4
+        with:
+          # The whole history, so the version tags are there.
+          fetch-depth: 0
+
+      - name: Choose the version
+        id: version
+        shell: pwsh
+        env:
+          REQUESTED: ${{ inputs.version }}
+        run: |
+          $requested = $env:REQUESTED.Trim().TrimStart('v')
+          $tagged = git tag --list 'v*' |
+            ForEach-Object { $_.Substring(1) } |
+            Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
+            ForEach-Object { [version]$_ } |
+            Sort-Object
+
+          if ($requested) {
+            if ($requested -notmatch '^\d+\.\d+\.\d+$') {
+              throw "The version must be three numbers, such as 2.0.0, not '$requested'."
+            }
+            $version = $requested
+          }
+          elseif ($tagged) {
+            $last = $tagged[-1]
+            $version = "$($last.Major).$($last.Minor).$($last.Build + 1)"
+          }
+          else {
+            # The first build.
+            $version = '1.0.0'
+          }
+
+          if (git tag --list "v$version") {
+            throw "Version $version was already built. Enter a higher one, or leave it empty."
+          }
+
+          Write-Host "Building version $version"
+          "number=$version" >> $env:GITHUB_OUTPUT
 
       - name: Set up .NET 10
         uses: actions/setup-dotnet@v4
@@ -25,19 +73,25 @@ jobs:
         run: dotnet restore BluetoothAudioManager.slnx
 
       - name: Build
-        run: dotnet build BluetoothAudioManager.slnx --configuration Release --no-restore
+        run: dotnet build BluetoothAudioManager.slnx --configuration Release --no-restore -p:Version=${{ steps.version.outputs.number }}
 
       - name: Test
         run: dotnet test BluetoothAudioManager.slnx --configuration Release --no-build --verbosity normal
 
       # Self-contained, so the app runs on a PC without .NET installed.
       - name: Publish
-        run: dotnet publish BluetoothAudioManager.App --configuration Release --runtime win-x64 --self-contained --output publish
+        run: dotnet publish BluetoothAudioManager.App --configuration Release --runtime win-x64 --self-contained --output publish -p:Version=${{ steps.version.outputs.number }}
 
       - name: Keep the published app
         uses: actions/upload-artifact@v4
         with:
-          name: BluetoothAudioManager-win-x64
+          name: BluetoothAudioManager-${{ steps.version.outputs.number }}-win-x64
           path: publish
           # Kept briefly, as artifacts count against the free plan's storage.
           retention-days: 7
+
+      # Last, so only a build that passed takes up a version.
+      - name: Tag the version
+        run: |
+          git tag v${{ steps.version.outputs.number }}
+          git push origin v${{ steps.version.outputs.number }}
