@@ -197,7 +197,7 @@ public partial class MainWindow : Window
     public void AllowClose() => _closeAllowed = true;
 
     /// <summary>Gives the settings the updater to ask whether it checks for updates by itself.</summary>
-    public void UseUpdater(AppUpdater updater) => AppSettingsView.Updater = updater;
+    internal void UseUpdater(AppUpdater updater) => AppSettingsView.Updater = updater;
 
     /// <summary>Shows the bar offering to install a downloaded update.</summary>
     public void ShowUpdateReady(string version)

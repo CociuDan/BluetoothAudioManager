@@ -20,7 +20,7 @@ public partial class AppSettingsPanel : UserControl
     }
 
     /// <summary>The updater to ask about checking automatically, set by the app. Without one, that setting isn't shown.</summary>
-    public AppUpdater? Updater { get; set; }
+    internal AppUpdater? Updater { get; set; }
 
     /// <summary>Shows the current settings. Start with Windows is read again, as the tray menu can change it too.</summary>
     public void Show(AppSettings settings)
