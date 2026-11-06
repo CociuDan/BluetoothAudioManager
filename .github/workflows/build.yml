@@ -1,7 +1,7 @@
 # Builds and tests the app in Release mode, and keeps the published app for a week to download and try.
 # It runs only when started by hand: GitHub, the repository's Actions tab, "Build", "Run workflow".
 #
-# Each successful run gets a version and tags its commit with it, such as v1.0.3.
+# Each successful run gets a version and tags its commit with it, such as v0.0.3.
 # Leave the version empty to take the highest tagged version and add 1 to its last number,
 # or enter one, such as 2.0.0, to set it. Later runs then count up from there.
 name: Build
@@ -54,7 +54,7 @@ jobs:
           }
           else {
             # The first build.
-            $version = '1.0.0'
+            $version = '0.0.1'
           }
 
           if (git tag --list "v$version") {
