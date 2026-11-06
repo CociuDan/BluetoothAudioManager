@@ -17,7 +17,7 @@ internal static class AppUninstaller
 
         progress.Report(0.05);
         UpdaterService.Remove();
-        RunningApp.CloseEverywhere();
+        RunningApp.CloseEverywhere(installFolder);
 
         progress.Report(0.15);
         UserCleanup.RemoveForEveryone();
@@ -31,10 +31,7 @@ internal static class AppUninstaller
         }
 
         progress.Report(0.7);
-        if (Directory.Exists(InstallLayout.DataFolder))
-        {
-            Directory.Delete(InstallLayout.DataFolder, recursive: true);
-        }
+        InstalledFiles.DeleteFolder(InstallLayout.DataFolder);
 
         progress.Report(0.8);
         if (installFolder is not null)

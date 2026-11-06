@@ -34,12 +34,18 @@ internal static class AppInstaller
         // A copy already installed closes first, wherever it is, so its files can be replaced.
         progress.Report(0.02);
         UpdaterService.Remove();
-        RunningApp.CloseEverywhere();
-        if (InstallLayout.InstallFolder is { } previous
+        var previous = InstallLayout.InstallFolder;
+        RunningApp.CloseEverywhere(previous);
+        RunningApp.CloseEverywhere(installFolder);
+        if (previous is not null
             && !string.Equals(Path.GetFullPath(previous), installFolder, StringComparison.OrdinalIgnoreCase))
         {
             InstalledFiles.Remove(previous);
         }
+
+        // Emptied first, waiting a little for files a closing program hasn't let go of yet.
+        InstalledFiles.DeleteFolder(InstallLayout.AppFolder(installFolder));
+        InstalledFiles.DeleteFolder(InstallLayout.UpdaterFolder(installFolder));
 
         // Only administrators and Windows may change these, as the updater runs what's in them with administrator rights.
         // Program Files is already like that, but another folder chosen to install in may not be.
@@ -47,7 +53,7 @@ internal static class AppInstaller
         SecureFolder.Ensure(installFolder);
 
         // A downloaded installer from before starts afresh, as this install may be newer.
-        DeleteFolder(InstallLayout.UpdateFolder(installFolder));
+        InstalledFiles.DeleteFolder(InstallLayout.UpdateFolder(installFolder));
 
         progress.Report(0.05);
         using (var package = OpenPackage())
@@ -130,12 +136,4 @@ internal static class AppInstaller
 
     private static long FolderSize(string folder) =>
         new DirectoryInfo(folder).EnumerateFiles("*", SearchOption.AllDirectories).Sum(file => file.Length);
-
-    private static void DeleteFolder(string folder)
-    {
-        if (Directory.Exists(folder))
-        {
-            Directory.Delete(folder, recursive: true);
-        }
-    }
 }

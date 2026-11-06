@@ -163,11 +163,6 @@ internal static class UserCleanup
         }
     }
 
-    private static void DeleteFolder(string folder)
-    {
-        if (Directory.Exists(folder))
-        {
-            Directory.Delete(folder, recursive: true);
-        }
-    }
+    // Waits a little for locked files, and leaves any still locked for Windows to delete when it restarts.
+    private static void DeleteFolder(string folder) => InstalledFiles.DeleteFolder(folder);
 }
