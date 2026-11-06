@@ -9,9 +9,14 @@ namespace BluetoothAudioManager.Updater.Models;
 /// </summary>
 public sealed class UpdaterSettings
 {
-    public const int DefaultCheckEveryMinutes = 240;
+    public static readonly TimeSpan DefaultCheckEvery = TimeSpan.FromHours(4);
+
+    // Keeps a mistyped value, such as "00:00:00", from asking GitHub without a pause.
+    private static readonly TimeSpan LeastCheckEvery = TimeSpan.FromSeconds(10);
 
     private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
+
+    private TimeSpan _checkEvery = DefaultCheckEvery;
 
     /// <summary>
     /// Whether the updater checks GitHub by itself, on its schedule. Off, it only checks when the app asks,
@@ -19,19 +24,34 @@ public sealed class UpdaterSettings
     /// </summary>
     public bool CheckAutomatically { get; set; } = true;
 
-    /// <summary>How often to check GitHub for a new version, in minutes. 1 at the least.</summary>
-    public int CheckEveryMinutes { get; set; } = DefaultCheckEveryMinutes;
+    /// <summary>
+    /// How often to check GitHub for a new version, written in the file as hours:minutes:seconds,
+    /// such as "04:00:00", and 10 seconds at the least.
+    /// </summary>
+    public TimeSpan CheckEvery
+    {
+        get => _checkEvery;
+        set => _checkEvery = value < LeastCheckEvery ? LeastCheckEvery : value;
+    }
 
-    public TimeSpan CheckEvery => TimeSpan.FromMinutes(Math.Max(1, CheckEveryMinutes));
-
-    /// <summary>Reads the settings, writing the file with the defaults if it's missing.</summary>
+    /// <summary>
+    /// Reads the settings, writing the file with the defaults if it's missing. A file with settings that are
+    /// no longer used, or without new ones, is written again with just the current settings.
+    /// </summary>
     public static UpdaterSettings Load()
     {
         try
         {
             if (File.Exists(InstallLayout.SettingsPath))
             {
-                return JsonSerializer.Deserialize<UpdaterSettings>(File.ReadAllText(InstallLayout.SettingsPath)) ?? new UpdaterSettings();
+                var text = File.ReadAllText(InstallLayout.SettingsPath);
+                var settings = JsonSerializer.Deserialize<UpdaterSettings>(text) ?? new UpdaterSettings();
+                if (JsonSerializer.Serialize(settings, WriteOptions) != text)
+                {
+                    settings.Save();
+                }
+
+                return settings;
             }
 
             var defaults = new UpdaterSettings();
