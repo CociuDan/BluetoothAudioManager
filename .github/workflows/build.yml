@@ -1,14 +1,14 @@
 # Builds and tests the app in Release mode, makes its installer, and publishes it as a GitHub release.
-# It's started by the Release workflow, which fills in the version so this run's title shows it.
-# It can also be started by hand: GitHub, the repository's Actions tab, "Build", "Run workflow".
+# It runs only when started by hand: GitHub, the repository's Actions tab, "Build", "Run workflow".
 #
 # Each successful run gets a version, tags its commit with it, such as v0.0.3, and creates a release with the installer,
 # which the installed updater also downloads to update. Leave the version empty to take the highest tagged version and add 1
 # to its last number, or enter one, such as 2.0.0, to set it. Later runs then count up from there.
 name: Build
-# The title in the Actions list. Started by hand without a version, it gets its number only after the title is set,
-# so its summary page shows the number instead.
-run-name: Build ${{ inputs.version || '(next version)' }}
+# The title in the Actions list. GitHub sets it as the run starts, before anything inside it runs, and it can only read
+# inputs and the repository's variables. So each run saves the following version in the NEXT_VERSION variable for the
+# next run's title. The tags still decide the version itself, so a title can only be off if that variable couldn't be saved.
+run-name: Build ${{ inputs.version || vars.NEXT_VERSION || '(next version)' }}
 
 on:
   workflow_dispatch:
@@ -33,7 +33,6 @@ jobs:
           # The whole history, so the version tags are there.
           fetch-depth: 0
 
-      # Release fills the version in. Started directly without one, it's worked out the same way.
       - name: Choose the version
         id: version
         shell: pwsh
@@ -106,3 +105,25 @@ jobs:
           gh release create v${{ steps.version.outputs.number }}
           release/BluetoothAudioManager-Setup.exe
           --title v${{ steps.version.outputs.number }} --generate-notes --verify-tag
+
+      # The following version, for the next run's title. GitHub's own token can't change variables, so this uses the
+      # VARIABLES_TOKEN secret: a token allowed only to read and write this repository's variables. Without it, or if it
+      # has expired, the release is still made and this only warns, as the title is all that depends on it.
+      - name: Save the next version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.VARIABLES_TOKEN }}
+          VERSION: ${{ steps.version.outputs.number }}
+        run: |
+          $current = [version]$env:VERSION
+          $next = "$($current.Major).$($current.Minor).$($current.Build + 1)"
+          if (-not $env:GH_TOKEN) {
+            Write-Host "::warning::The VARIABLES_TOKEN secret is missing, so the next run's title can't show version $next."
+            exit 0
+          }
+          gh variable set NEXT_VERSION --body $next --repo "${{ github.repository }}"
+          if ($LASTEXITCODE) {
+            Write-Host "::warning::Couldn't save the next version, $next, for the next run's title. VARIABLES_TOKEN may have expired."
+            exit 0
+          }
+          Write-Host "The next run will be titled Build $next"

@@ -1,4 +1,4 @@
-# Chooses the version for a build, used by both the Release and the Build workflows.
+# Chooses the version for a build, used by the Build workflow.
 # With a version asked for, such as 2.0.0, it's that one. Without, it's the highest tagged version with 1 added to its
 # last number, or 0.0.1 for the first build. A version that's already tagged is refused, as each can be used only once.
 # Needs the repository's tags, so check out with its whole history.

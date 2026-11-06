@@ -82,7 +82,7 @@ The repository is private, so the updater downloads releases with a read-only Gi
 1. On GitHub, open **Settings**, **Developer settings**, **Personal access tokens**, **Fine-grained tokens**, then **Generate new token**. Give it access to only this repository, with **Contents** set to **Read-only**, and copy it.
 2. In this repository, open **Settings**, **Secrets and variables**, **Actions**, then **New repository secret**. Name it `UPDATE_TOKEN` and paste the token.
 
-The Build workflow stops if the secret is missing. Anyone with the installed app could take the token out of the updater and read this repository, though not change it. Before the token expires, make a new one, replace the secret and run Release: installed copies download that update with the old token and get the new one with it. A copy that stays offline until the old token expires has to be installed again by hand.
+The Build workflow stops if the secret is missing. Anyone with the installed app could take the token out of the updater and read this repository, though not change it. Before the token expires, make a new one, replace the secret and run Build: installed copies download that update with the old token and get the new one with it. A copy that stays offline until the old token expires has to be installed again by hand.
 
 ### Product images
 
@@ -114,8 +114,15 @@ dotnet test
 
 ## Build on GitHub
 
-The **Build** workflow in `.github/workflows/build.yml` builds the app in Release mode on a GitHub-hosted Windows machine, runs the tests, publishes the app and the updater self-contained so they run without .NET installed, and makes the installer with both inside it. Start a release from the repository's **Actions** tab: choose **Release**, then **Run workflow**. The **Release** workflow, in `.github/workflows/release.yml`, takes a few seconds to work out the version, then starts **Build** with it filled in, so the Build run is titled with its version, such as **Build 0.0.5**. GitHub titles a run as it starts, so Build can't show a version it works out itself. Both work out versions with `.github/scripts/Get-NextVersion.ps1`. Build can still be started directly, titled **Build (next version)** when no version is entered. Build output is never committed.
+The **Build** workflow in `.github/workflows/build.yml` builds the app in Release mode on a GitHub-hosted Windows machine, runs the tests, publishes the app and the updater self-contained so they run without .NET installed, and makes the installer with both inside it. Start it from the repository's **Actions** tab: choose **Build**, then **Run workflow**. Build output is never committed.
 
-Each build that passes gets a version, which the app's files carry, and its commit is tagged with it, such as `v0.0.3`. In **Release**, leave **Version** empty to add 1 to the last number of the highest version so far, starting at 0.0.1. To change it, enter a version such as `2.0.0` when you start the run, and later builds count up from there. A version can be used only once. A build that fails doesn't use up its version. Builds on your own PC are 1.0.0.
+Each build that passes gets a version, which the app's files carry, and its commit is tagged with it, such as `v0.0.3`. Leave **Version** empty to add 1 to the last number of the highest version so far, starting at 0.0.1. To change it, enter a version such as `2.0.0` when you start the run, and later builds count up from there. A version can be used only once. A build that fails doesn't use up its version. Builds on your own PC are 1.0.0. `.github/scripts/Get-NextVersion.ps1` works the version out.
+
+Each run is titled with its version in the Actions list, such as **Build 0.0.5**. GitHub sets a run's title as it starts, before anything inside it runs, and it can only read what you type and the repository's variables. So each run that passes saves the following version in the repository variable `NEXT_VERSION`, for the next run's title. GitHub's own token can't change variables, so this needs a second token:
+
+1. On GitHub, create another fine-grained token as for `UPDATE_TOKEN`, with access to only this repository, and with **Variables** set to **Read and write** and nothing else. Don't give `UPDATE_TOKEN` this, as it's built into the updater on every PC.
+2. Add it as a repository secret named `VARIABLES_TOKEN`.
+
+The first run after that creates the variable. Without the secret, or once the token expires, releases are still made, and the run only warns that it couldn't save the next version. The next title then shows **(next version)**, or the last version it saved. The version itself always comes from the tags, so only the title can be off.
 
 Each version also gets a release, shown in the **Releases** box on the repository's main page, with the newest marked **Latest**. Its page lists the commits since the previous release. Its one file is `BluetoothAudioManager-Setup.exe`, for installing and for the updater to download, kept until you delete the release. The updater only looks at the latest release, so deleting it makes the one before it the latest.
