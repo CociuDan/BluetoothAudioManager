@@ -229,7 +229,7 @@ public partial class MainWindow : Window
                     ? new BatteryReading(headset.BatteryPercent, headset.IsCharging)
                     : null)
                 : async () => new BatteryReading(await DeviceBatteryReader.ReadPercentAsync(name), false);
-            var row = new HeadphoneRow(name, TitleFor(device), PictureFor(device), _settings, connection, readBattery);
+            var row = new HeadphoneRow(name, TitleFor(device), PictureFor(device), ProductPictures.EarbudsForDeviceName(device.Name), _settings, connection, readBattery);
             if (device.IsUsbAdapter)
             {
                 _usbAdapterRows.Add(row);

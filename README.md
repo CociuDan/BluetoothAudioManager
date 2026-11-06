@@ -59,11 +59,11 @@ Starting with Windows opens the app hidden in the tray. The setting stores the p
 
 ### Product images
 
-The AirPods pictures in `Assets` come from Apple, `Assets/MajorIV.png` from Marshall, and `Assets/JabraEvolve65.png` and `Assets/JabraEvolve65Mono.png` from Jabra, and those companies own them. The pod and Major IV images are edited cut-outs. They're here for private use only, so remove them before publishing this repo or sharing the app.
+The AirPods pictures in `Assets` come from Apple, the Marshall pictures (`MajorIV.png` and the other Major, Mid, Milton, Monitor, Minor, Mode and Motif files) from Marshall, and `Assets/JabraEvolve65.png` and `Assets/JabraEvolve65Mono.png` from Jabra, and those companies own them. The Minor II bud comes from a Marshall retailer's studio photo. The pod and Marshall images are edited cut-outs, and each right earbud is its left one mirrored. They're here for private use only, so remove them before publishing this repo or sharing the app.
 
 The AirPods pictures are chosen by the product ID Windows stores for the paired AirPods. AirPods 3, AirPods 4 and AirPods Pro have their own pictures, and all AirPods Pro use the AirPods Pro 1 pictures. AirPods 1, AirPods 2 and models not recognized yet, such as AirPods 5 and AirPods Pro 3, show the AirPods 4 pictures.
 
-Other headphones get the picture whose entry in `DevicePictures` matches part of their Windows name, such as "MAJOR IV", or a generic headphones placeholder if none does. To add a device, put its picture in `Assets` and add a line to `BluetoothAudioManager.Core/Helpers/DevicePictures.cs`.
+Other headphones get the picture whose entry in `DevicePictures` matches part of their Windows name, such as "MAJOR IV", or a generic headphones placeholder if none does. Names match as whole words, ignoring capitals and dots, and the longest match wins, so "MID ANC" and "MID", or "MONITOR III" and "MONITOR II", each get their own picture. Every Marshall Bluetooth headphone and earbud model has one. Earbuds, such as the Marshall Minor, Mode and Motif, are shown like the AirPods: left bud, right bud and case, with one battery badge under the buds if Windows reports a level. To add a device, put its pictures in `Assets` and add a line to `BluetoothAudioManager.Core/Helpers/DevicePictures.cs`.
 
 ## Requirements
 

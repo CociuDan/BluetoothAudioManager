@@ -13,6 +13,29 @@
                        ToolTip="Headphones" AutomationProperties.Name="Headphones" />
                 <local:BatteryBadge x:Name="Badge" Margin="0,8,0,0" Visibility="Hidden" />
             </StackPanel>
+            <!--
+                Earbuds are laid out like the AirPods: left bud, right bud, then the case, in the same columns and height.
+                Windows gives one level at most for them, so a single badge sits under the buds.
+            -->
+            <Grid x:Name="EarbudsArea" Height="130" Margin="22,0,0,0" Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="88" />
+                    <ColumnDefinition Width="88" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="130" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="104" />
+                    <RowDefinition Height="26" />
+                </Grid.RowDefinitions>
+                <Image x:Name="LeftBudPicture" Height="96" VerticalAlignment="Top" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                       ToolTip="Left earbud" AutomationProperties.Name="Left earbud" />
+                <Image x:Name="RightBudPicture" Grid.Column="1" Height="96" VerticalAlignment="Top" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                       ToolTip="Right earbud" AutomationProperties.Name="Right earbud" />
+                <Image x:Name="CasePicture" Grid.Column="3" Height="96" VerticalAlignment="Top" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                       ToolTip="Case" AutomationProperties.Name="Case" />
+                <local:BatteryBadge x:Name="EarbudsBadge" Grid.Row="1" Grid.ColumnSpan="2" Visibility="Hidden" />
+            </Grid>
             <local:LowBatterySetting x:Name="BatterySetting" Height="130" Margin="22,0,0,0" Visibility="Collapsed" />
         </StackPanel>
     </Border>

@@ -1,5 +1,6 @@
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using BluetoothAudioManager.App.Models;
 using BluetoothAudioManager.Core.Enums;
 using BluetoothAudioManager.Core.Helpers;
 
@@ -10,9 +11,15 @@ internal static class ProductPictures
 {
     public static ImageSource AirPodsMax => Load("AirPodsMax.png");
 
-    /// <returns>The device's picture, or null if there's none for it.</returns>
+    /// <returns>The device's picture, or null if there's none for it or it's earbuds.</returns>
     public static ImageSource? ForDeviceName(string deviceName) =>
         DevicePictures.FileFor(deviceName) is { } fileName ? Load(fileName) : null;
+
+    /// <returns>The buds and case for earbuds, or null for anything else.</returns>
+    public static EarbudPictures? EarbudsForDeviceName(string deviceName) =>
+        DevicePictures.For(deviceName) is { IsEarbuds: true } picture
+            ? new EarbudPictures(Load(picture.LeftBud!), Load(picture.RightBud!), picture.Case is { } caseFile ? Load(caseFile) : null)
+            : null;
 
     /// <summary>
     /// The pods and case for a family. Families without their own pictures yet, such as AirPods 1 and 2,
