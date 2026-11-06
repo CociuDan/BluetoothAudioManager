@@ -1,0 +1,43 @@
+# Builds and tests the app in Release mode, and keeps the published app for a week to download and try.
+# It runs only when started by hand: GitHub, the repository's Actions tab, "Build", "Run workflow".
+name: Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore packages
+        run: dotnet restore BluetoothAudioManager.slnx
+
+      - name: Build
+        run: dotnet build BluetoothAudioManager.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test BluetoothAudioManager.slnx --configuration Release --no-build --verbosity normal
+
+      # Self-contained, so the app runs on a PC without .NET installed.
+      - name: Publish
+        run: dotnet publish BluetoothAudioManager.App --configuration Release --runtime win-x64 --self-contained --output publish
+
+      - name: Keep the published app
+        uses: actions/upload-artifact@v4
+        with:
+          name: BluetoothAudioManager-win-x64
+          path: publish
+          # Kept briefly, as artifacts count against the free plan's storage.
+          retention-days: 7

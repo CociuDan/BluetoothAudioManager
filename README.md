@@ -84,3 +84,7 @@ In VS Code, open this folder and press F5. This needs the C# Dev Kit extension, 
 ```bash
 dotnet test
 ```
+
+## Build on GitHub
+
+The **Build** workflow in `.github/workflows/build.yml` builds the app in Release mode on a GitHub-hosted Windows machine, runs the tests, and publishes a self-contained app that runs without .NET installed. Start it from the repository's **Actions** tab: choose **Build**, then **Run workflow**. When it finishes, the run's page has a **BluetoothAudioManager-win-x64** download, kept for 7 days. Unzip it and run `BluetoothAudioManager.App.exe`. Build output is never committed.
