@@ -5,6 +5,9 @@
 # Leave the version empty to take the highest tagged version and add 1 to its last number,
 # or enter one, such as 2.0.0, to set it. Later runs then count up from there.
 name: Build
+# The title in the Actions list. A run without a version entered gets its number once it starts,
+# after the title is set, so its summary page shows the number instead.
+run-name: Build ${{ inputs.version || '(next version)' }}
 
 on:
   workflow_dispatch:
@@ -63,6 +66,7 @@ jobs:
 
           Write-Host "Building version $version"
           "number=$version" >> $env:GITHUB_OUTPUT
+          "## Version $version" >> $env:GITHUB_STEP_SUMMARY
 
       - name: Set up .NET 10
         uses: actions/setup-dotnet@v4
