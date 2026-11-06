@@ -1,12 +1,13 @@
 # Builds and tests the app in Release mode, makes its installer, and publishes it as a GitHub release.
-# It runs only when started by hand: GitHub, the repository's Actions tab, "Build", "Run workflow".
+# It's started by the Release workflow, which fills in the version so this run's title shows it.
+# It can also be started by hand: GitHub, the repository's Actions tab, "Build", "Run workflow".
 #
 # Each successful run gets a version, tags its commit with it, such as v0.0.3, and creates a release with the installer,
 # which the installed updater also downloads to update. Leave the version empty to take the highest tagged version and add 1
 # to its last number, or enter one, such as 2.0.0, to set it. Later runs then count up from there.
 name: Build
-# The title in the Actions list. A run without a version entered gets its number once it starts,
-# after the title is set, so its summary page shows the number instead.
+# The title in the Actions list. Started by hand without a version, it gets its number only after the title is set,
+# so its summary page shows the number instead.
 run-name: Build ${{ inputs.version || '(next version)' }}
 
 on:
@@ -32,38 +33,14 @@ jobs:
           # The whole history, so the version tags are there.
           fetch-depth: 0
 
+      # Release fills the version in. Started directly without one, it's worked out the same way.
       - name: Choose the version
         id: version
         shell: pwsh
         env:
           REQUESTED: ${{ inputs.version }}
         run: |
-          $requested = $env:REQUESTED.Trim().TrimStart('v')
-          $tagged = git tag --list 'v*' |
-            ForEach-Object { $_.Substring(1) } |
-            Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
-            ForEach-Object { [version]$_ } |
-            Sort-Object
-
-          if ($requested) {
-            if ($requested -notmatch '^\d+\.\d+\.\d+$') {
-              throw "The version must be three numbers, such as 2.0.0, not '$requested'."
-            }
-            $version = $requested
-          }
-          elseif ($tagged) {
-            $last = $tagged[-1]
-            $version = "$($last.Major).$($last.Minor).$($last.Build + 1)"
-          }
-          else {
-            # The first build.
-            $version = '0.0.1'
-          }
-
-          if (git tag --list "v$version") {
-            throw "Version $version was already built. Enter a higher one, or leave it empty."
-          }
-
+          $version = ./.github/scripts/Get-NextVersion.ps1 -Requested $env:REQUESTED
           Write-Host "Building version $version"
           "number=$version" >> $env:GITHUB_OUTPUT
           "## Version $version" >> $env:GITHUB_STEP_SUMMARY
