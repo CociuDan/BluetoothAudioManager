@@ -66,10 +66,10 @@ public sealed class UpdateWorker : BackgroundService
                 return UpdaterPipe.Format(await CheckAsync(stop));
 
             case [UpdaterPipe.ReleaseNotesCommand]:
-                var release = await _github.LatestAsync(stop);
+                var release = await _github.LatestReleaseNotesAsync(stop);
                 return release is null
                     ? UpdaterPipe.ReleaseNotesUnavailableReply
-                    : UpdaterPipe.FormatReleaseNotes(release.Version, release.Notes);
+                    : UpdaterPipe.FormatReleaseNotes(release.Value.Version, release.Value.Notes);
 
             case [UpdaterPipe.InstallCommand, .. var options]:
                 return await StartInstallAsync(client, options.Contains(UpdaterPipe.ShowWindowOption), stop)

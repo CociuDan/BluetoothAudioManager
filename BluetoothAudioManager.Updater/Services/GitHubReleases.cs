@@ -10,9 +10,12 @@ namespace BluetoothAudioManager.Updater.Services;
 /// <summary>Reads the repository's latest release and downloads its installer, using the token the pipeline built in.</summary>
 public sealed class GitHubReleases : IDisposable
 {
+    private const string ApiUrl = "https://api.github.com/repos/CociuDan/BluetoothAudioManager";
     private const string LatestReleaseUrl = "https://api.github.com/repos/CociuDan/BluetoothAudioManager/releases/latest";
     private const string TokenKey = "UpdateToken";
     private const string DigestPrefix = "sha256:";
+    private const string CompareNotesPrefix = "**Full Changelog**:";
+    private const string ComparePathPrefix = "/CociuDan/BluetoothAudioManager/compare/";
 
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromMinutes(10) };
 
@@ -63,6 +66,77 @@ public sealed class GitHubReleases : IDisposable
         }
 
         return null;
+    }
+
+    /// <summary>Reads release notes, replacing GitHub's generated comparison link with commit summaries.</summary>
+    public async Task<(string Version, string Notes)?> LatestReleaseNotesAsync(CancellationToken cancel)
+    {
+        var release = await LatestAsync(cancel);
+        if (release is null)
+        {
+            return null;
+        }
+
+        return TryGetCompareRefs(release.Notes, out var baseRef, out var headRef)
+            ? (release.Version, await CommitSummariesAsync(baseRef, headRef, cancel))
+            : (release.Version, release.Notes);
+    }
+
+    private async Task<string> CommitSummariesAsync(string baseRef, string headRef, CancellationToken cancel)
+    {
+        var compareUrl = $"{ApiUrl}/compare/{Uri.EscapeDataString(baseRef)}...{Uri.EscapeDataString(headRef)}";
+        using var request = new HttpRequestMessage(HttpMethod.Get, compareUrl);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+        using var response = await _http.SendAsync(request, cancel);
+        response.EnsureSuccessStatusCode();
+
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancel));
+        var summaries = new List<string>();
+        foreach (var item in json.RootElement.GetProperty("commits").EnumerateArray())
+        {
+            var message = item.GetProperty("commit").GetProperty("message").GetString();
+            var summary = message?.Split('\n', 2)[0].Trim();
+            if (!string.IsNullOrEmpty(summary))
+            {
+                summaries.Add($"- {summary}");
+            }
+        }
+
+        return summaries.Count > 0
+            ? string.Join(Environment.NewLine, summaries)
+            : "No commit summaries are available for this release.";
+    }
+
+    private static bool TryGetCompareRefs(string notes, out string baseRef, out string headRef)
+    {
+        baseRef = "";
+        headRef = "";
+        var line = notes.Trim();
+        if (!line.StartsWith(CompareNotesPrefix, StringComparison.Ordinal)
+            || line.Contains('\n'))
+        {
+            return false;
+        }
+
+        var link = line[CompareNotesPrefix.Length..].Trim();
+        if (!Uri.TryCreate(link, UriKind.Absolute, out var uri)
+            || uri.Scheme != Uri.UriSchemeHttps
+            || uri.Host != "github.com"
+            || !uri.AbsolutePath.StartsWith(ComparePathPrefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var refs = uri.AbsolutePath[ComparePathPrefix.Length..];
+        var separator = refs.IndexOf("...", StringComparison.Ordinal);
+        if (separator <= 0 || separator + 3 >= refs.Length)
+        {
+            return false;
+        }
+
+        baseRef = Uri.UnescapeDataString(refs[..separator]);
+        headRef = Uri.UnescapeDataString(refs[(separator + 3)..]);
+        return !baseRef.Contains('/') && !headRef.Contains('/');
     }
 
     /// <summary>
