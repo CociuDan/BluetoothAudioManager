@@ -18,11 +18,43 @@ internal static class StartupRegistration
     public const string StartupArgument = InstallLayout.StartupArgument;
 
     private static readonly bool IsInstalled = InstallLayout.IsInstalledApp();
+    private static readonly TimeSpan UpdaterTimeout = TimeSpan.FromSeconds(3);
 
     public static bool IsEnabled => IsOwnSettingOn && !IsTurnedOffInWindows;
 
-    /// <summary>Turns starting with Windows on or off for this person. Returns whether it's on afterwards.</summary>
-    public static bool SetEnabled(bool enabled)
+    /// <summary>
+    /// Turns starting with the system on or off for this person, and returns whether it's on afterwards.
+    /// Turned off for everyone in Task Manager, the installed app asks the updater service to undo that, as it
+    /// needs administrator rights.
+    /// </summary>
+    public static async Task<bool> SetEnabledAsync(bool enabled)
+    {
+        SetEnabled(enabled);
+
+        if (enabled && IsInstalled && IsTurnedOff(Registry.LocalMachine))
+        {
+            await UpdaterPipe.SendAsync($"{UpdaterPipe.StartupCommand} {UpdaterPipe.OnOption}", UpdaterTimeout);
+        }
+
+        return IsEnabled;
+    }
+
+    /// <summary>
+    /// Removes the entry an earlier version added for this person, as the installer's entry for everyone starts the
+    /// installed app now, and both would start it twice.
+    /// </summary>
+    public static void RemoveOwnEntryIfInstalled()
+    {
+        if (!IsInstalled)
+        {
+            return;
+        }
+
+        using var run = Registry.CurrentUser.OpenSubKey(InstallLayout.RunKeyPath, writable: true);
+        run?.DeleteValue(InstallLayout.RunValueName, false);
+    }
+
+    private static void SetEnabled(bool enabled)
     {
         if (IsInstalled)
         {
@@ -43,28 +75,11 @@ internal static class StartupRegistration
         }
 
         // Turned off here, it stays as Windows has it, as the app closes itself when started anyway.
+        // Turned off for this person in Task Manager, the app can undo it itself.
         if (enabled)
         {
             ClearTurnedOff(Registry.CurrentUser);
-            ClearTurnedOff(Registry.LocalMachine);
         }
-
-        return IsEnabled;
-    }
-
-    /// <summary>
-    /// Removes the entry an earlier version added for this person, as the installer's entry for everyone starts the
-    /// installed app now, and both would start it twice.
-    /// </summary>
-    public static void RemoveOwnEntryIfInstalled()
-    {
-        if (!IsInstalled)
-        {
-            return;
-        }
-
-        using var run = Registry.CurrentUser.OpenSubKey(InstallLayout.RunKeyPath, writable: true);
-        run?.DeleteValue(InstallLayout.RunValueName, false);
     }
 
     private static bool IsOwnSettingOn
@@ -98,8 +113,7 @@ internal static class StartupRegistration
         }
     }
 
-    // Without a value, Windows treats the entry as on. Turned off for everyone, it needs administrator rights to undo,
-    // so then it stays off, and the switch shows that.
+    // Without a value, Windows treats the entry as on.
     private static void ClearTurnedOff(RegistryKey root)
     {
         try

@@ -84,8 +84,39 @@ public sealed class UpdateWorker : BackgroundService
                     ? UpdaterPipe.OkReply
                     : UpdaterPipe.Format(new UpdateStatus(UpdateState.Failed));
 
+            case [UpdaterPipe.StartupCommand, UpdaterPipe.OnOption]:
+                return TurnStartupBackOn(client)
+                    ? UpdaterPipe.OkReply
+                    : UpdaterPipe.Format(new UpdateStatus(UpdateState.Failed));
+
             default:
                 return UpdaterPipe.Format(new UpdateStatus(UpdateState.Failed));
+        }
+    }
+
+    /// <summary>
+    /// Clears Windows' record that the app was turned off for everyone in Task Manager's Startup apps tab, if the installed
+    /// app is the one asking. Each person's own choice in the app still decides whether it stays open for them.
+    /// </summary>
+    private static bool TurnStartupBackOn(PipeClient client)
+    {
+        if (InstallLayout.InstallFolder is not { } installFolder || !IsInstalledApp(client, installFolder))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var machine = InstallLayout.OpenMachineKey();
+            using var approved = machine.OpenSubKey(InstallLayout.StartupApprovedKeyPath, writable: true);
+            approved?.DeleteValue(InstallLayout.RunValueName, throwOnMissingValue: false);
+            UpdaterLog.Write($"Starting with the system turned back on for everyone, from session {client.SessionId}.");
+            return true;
+        }
+        catch (Exception exception)
+        {
+            UpdaterLog.Write($"Couldn't turn starting with the system back on: {exception.Message}");
+            return false;
         }
     }
 

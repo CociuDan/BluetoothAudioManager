@@ -22,11 +22,11 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Text="Start with Windows" FontSize="14" />
+            <TextBlock Text="Start with the System" FontSize="14" />
             <TextBlock x:Name="StartupText" Grid.Column="1" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" />
             <ToggleButton x:Name="StartupToggle" Grid.Column="2" Style="{StaticResource SwitchStyle}"
                           VerticalAlignment="Center" Click="StartupToggle_Click"
-                          AutomationProperties.Name="Start with Windows" />
+                          AutomationProperties.Name="Start with the System" />
         </Grid>
 
         <!-- Only for the installed app, which has an updater to ask. -->

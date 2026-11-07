@@ -25,18 +25,18 @@ internal sealed class TrayIcon : IDisposable
         using var iconStream = System.Windows.Application.GetResourceStream(IconUri).Stream;
         _icon = new Icon(iconStream, Forms.SystemInformation.SmallIconSize);
 
-        var startWithWindows = new Forms.ToolStripMenuItem("Start with Windows")
+        var startWithSystem = new Forms.ToolStripMenuItem("Start with the System")
         {
             CheckOnClick = true,
             Checked = StartupRegistration.IsEnabled,
         };
-        // Shows what actually happened, as turning it on can't undo Task Manager turning it off for everyone.
-        startWithWindows.Click += (_, _) => startWithWindows.Checked = StartupRegistration.SetEnabled(startWithWindows.Checked);
+        // Shows what actually happened, such as when the updater couldn't undo Task Manager turning it off for everyone.
+        startWithSystem.Click += async (_, _) => startWithSystem.Checked = await StartupRegistration.SetEnabledAsync(startWithSystem.Checked);
 
         _menu = new Forms.ContextMenuStrip();
 
         // The window's settings and Task Manager can change it too, so it's read again each time the menu opens.
-        _menu.Opening += (_, _) => startWithWindows.Checked = StartupRegistration.IsEnabled;
+        _menu.Opening += (_, _) => startWithSystem.Checked = StartupRegistration.IsEnabled;
 
         // Hidden until an update is downloaded.
         _updateFont = new Font(_menu.Font, FontStyle.Bold);
@@ -46,7 +46,7 @@ internal sealed class TrayIcon : IDisposable
 
         _menu.Items.Add(_updateItem);
         _menu.Items.Add(_updateSeparator);
-        _menu.Items.Add(startWithWindows);
+        _menu.Items.Add(startWithSystem);
         _menu.Items.Add(new Forms.ToolStripSeparator());
         if (version is not null)
         {

@@ -8,7 +8,8 @@ namespace BluetoothAudioManager.Shared.Helpers;
 /// <summary>
 /// How the app talks to the updater service: one line asked, one line answered, over a local named pipe.
 /// The app can only ask for the status, a check, the install of what the updater downloaded and checked itself,
-/// release notes, or whether it checks by itself, so nothing can use the updater to run files of its own choosing.
+/// release notes, whether it checks by itself, or to start the app with the system again, so nothing can use the
+/// updater to run files of its own choosing.
 /// </summary>
 public static class UpdaterPipe
 {
@@ -34,6 +35,12 @@ public static class UpdaterPipe
     /// Followed by on or off, changes it for everyone on the PC, and answers ok.
     /// </summary>
     public const string AutomaticCommand = "automatic";
+
+    /// <summary>
+    /// Followed by on, undoes Task Manager's Startup apps tab turning the app off for everyone on the PC, which needs
+    /// administrator rights the app doesn't have, and answers ok. It only clears the app's own entry there.
+    /// </summary>
+    public const string StartupCommand = "startup";
 
     public const string OnOption = "on";
     public const string OffOption = "off";

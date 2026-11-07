@@ -18,7 +18,7 @@
 
             <TextBlock Margin="0,16,0,0" FontSize="13" Text="This closes the app and removes, for everyone on this PC:" />
             <!-- On one line, as line breaks in the markup would start each line with a space. -->
-            <TextBlock Margin="0,6,0,0" FontSize="13" Foreground="#CFCFCF" LineHeight="20">• The app, its updater and downloaded updates<LineBreak />• Its shortcuts and its entry in Installed apps<LineBreak />• Everyone's settings, Start with Windows and notifications</TextBlock>
+            <TextBlock Margin="0,6,0,0" FontSize="13" Foreground="#CFCFCF" LineHeight="20">• The app, its updater and downloaded updates<LineBreak />• Its shortcuts and its entry in Installed apps<LineBreak />• Everyone's settings, Start with the System and notifications</TextBlock>
             <TextBlock Margin="0,10,0,0" FontSize="12" Foreground="#CFCFCF" TextWrapping="Wrap"
                        Text="Your Bluetooth pairings and sound output stay as they are." />
 

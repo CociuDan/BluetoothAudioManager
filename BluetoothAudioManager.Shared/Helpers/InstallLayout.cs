@@ -26,7 +26,7 @@ public static class InstallLayout
 
     /// <summary>
     /// Starts the app hidden in the tray as Windows starts, from the entry the installer adds for everyone.
-    /// Someone who turned Start with Windows off gets no app: it closes straight away.
+    /// Someone who turned Start with the System off gets no app: it closes straight away.
     /// </summary>
     public const string StartupArgument = "--startup";
 

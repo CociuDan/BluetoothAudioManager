@@ -5,7 +5,7 @@ using Microsoft.Win32;
 namespace BluetoothAudioManager.Installer.Services;
 
 /// <summary>
-/// Removes what the app keeps for each person on the PC: their settings, Start with Windows, and what Windows stores
+/// Removes what the app keeps for each person on the PC: their settings, Start with the System, and what Windows stores
 /// for its notifications. People who aren't signed in have their registry files opened to reach theirs.
 /// </summary>
 internal static class UserCleanup
@@ -149,7 +149,7 @@ internal static class UserCleanup
 
     private static void RemoveSettings(RegistryKey user, IEnumerable<string> notificationIds)
     {
-        // Start with Windows from versions that set it for one person, and each person's choice about it now.
+        // Start with the System from versions that set it for one person, and each person's choice about it now.
         using (var run = user.OpenSubKey(InstallLayout.RunKeyPath, writable: true))
         {
             run?.DeleteValue(InstallLayout.RunValueName, throwOnMissingValue: false);
