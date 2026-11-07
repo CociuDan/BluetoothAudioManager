@@ -28,6 +28,10 @@ internal static class AppUninstaller
         {
             machine.DeleteSubKeyTree(InstallLayout.UninstallKeyPath, throwOnMissingSubKey: false);
             machine.DeleteSubKeyTree(InstallLayout.RegistryKeyPath, throwOnMissingSubKey: false);
+            using var run = machine.OpenSubKey(InstallLayout.RunKeyPath, writable: true);
+            run?.DeleteValue(InstallLayout.RunValueName, throwOnMissingValue: false);
+            using var approved = machine.OpenSubKey(InstallLayout.StartupApprovedKeyPath, writable: true);
+            approved?.DeleteValue(InstallLayout.RunValueName, throwOnMissingValue: false);
         }
 
         progress.Report(0.7);

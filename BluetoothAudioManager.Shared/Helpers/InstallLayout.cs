@@ -24,6 +24,30 @@ public static class InstallLayout
     /// <summary>Starts the app hidden in the tray, as when starting with Windows.</summary>
     public const string TrayArgument = "--tray";
 
+    /// <summary>
+    /// Starts the app hidden in the tray as Windows starts, from the entry the installer adds for everyone.
+    /// Someone who turned Start with Windows off gets no app: it closes straight away.
+    /// </summary>
+    public const string StartupArgument = "--startup";
+
+    /// <summary>Where Windows looks for programs to start at sign-in, under HKEY_LOCAL_MACHINE for everyone or HKEY_CURRENT_USER for one person.</summary>
+    public const string RunKeyPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
+
+    /// <summary>
+    /// Where Task Manager's Startup apps tab, and Settings' Startup page, record a Run entry turned off or on: a binary
+    /// value named like it, under HKEY_CURRENT_USER for one person or HKEY_LOCAL_MACHINE for everyone. Its first byte is
+    /// odd when turned off. Windows doesn't document it, but it has worked this way since Windows 8.
+    /// </summary>
+    public const string StartupApprovedKeyPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
+
+    /// <summary>The app's value in the Run keys.</summary>
+    public const string RunValueName = "BluetoothAudioManager";
+
+    /// <summary>Each person's own key, under HKEY_CURRENT_USER, with their choice of starting with Windows.</summary>
+    public const string UserKeyPath = @"SOFTWARE\BluetoothAudioManager";
+
+    public const string StartWithWindowsValue = "StartWithWindows";
+
     /// <summary>The release's one file: the installer, which the updater also downloads and runs to update.</summary>
     public const string SetupFileName = "BluetoothAudioManager-Setup.exe";
 

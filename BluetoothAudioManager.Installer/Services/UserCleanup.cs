@@ -11,8 +11,6 @@ namespace BluetoothAudioManager.Installer.Services;
 internal static class UserCleanup
 {
     private const string ProfileListPath = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList";
-    private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string RunValueName = "BluetoothAudioManager";
     private const string NotificationSettingsPath = @"Software\Microsoft\Windows\CurrentVersion\Notifications\Settings";
 
     // Local accounts and Microsoft accounts. Others, such as Windows' own service accounts, never run the app.
@@ -151,10 +149,19 @@ internal static class UserCleanup
 
     private static void RemoveSettings(RegistryKey user, IEnumerable<string> notificationIds)
     {
-        using (var run = user.OpenSubKey(RunKeyPath, writable: true))
+        // Start with Windows from versions that set it for one person, and each person's choice about it now.
+        using (var run = user.OpenSubKey(InstallLayout.RunKeyPath, writable: true))
         {
-            run?.DeleteValue(RunValueName, throwOnMissingValue: false);
+            run?.DeleteValue(InstallLayout.RunValueName, throwOnMissingValue: false);
         }
+
+        // What Task Manager's Startup apps tab recorded for it.
+        using (var approved = user.OpenSubKey(InstallLayout.StartupApprovedKeyPath, writable: true))
+        {
+            approved?.DeleteValue(InstallLayout.RunValueName, throwOnMissingValue: false);
+        }
+
+        user.DeleteSubKeyTree(InstallLayout.UserKeyPath, throwOnMissingSubKey: false);
 
         using var settings = user.OpenSubKey(NotificationSettingsPath, writable: true);
         foreach (var id in notificationIds)

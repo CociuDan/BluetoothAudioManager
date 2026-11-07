@@ -94,7 +94,10 @@ internal static class AppInstaller
         }
     }
 
-    /// <summary>Writes the app's own key, read by the app and the updater, and its entry in Installed apps, for this version.</summary>
+    /// <summary>
+    /// Writes the app's own key, read by the app and the updater, its entry in Installed apps, and its entry to start with
+    /// Windows for everyone, for this version.
+    /// </summary>
     public static void Register(string installFolder)
     {
         using var machine = InstallLayout.OpenMachineKey();
@@ -107,6 +110,12 @@ internal static class AppInstaller
 
         var appExe = Path.Combine(InstallLayout.AppFolder(installFolder), InstallLayout.AppExeName);
         var uninstaller = Path.Combine(installFolder, InstallLayout.UninstallerName);
+
+        // Starts the app for everyone who signs in. Each person can still turn it off for themselves in the app.
+        using (var run = machine.CreateSubKey(InstallLayout.RunKeyPath))
+        {
+            run.SetValue(InstallLayout.RunValueName, $"\"{appExe}\" {InstallLayout.StartupArgument}");
+        }
 
         using var entry = machine.CreateSubKey(InstallLayout.UninstallKeyPath);
         entry.SetValue("DisplayName", InstallLayout.ProductName);

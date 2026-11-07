@@ -28,6 +28,16 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // Windows starts the installed app for everyone; someone who turned that off gets nothing.
+        var fromWindowsStartup = e.Args.Contains(StartupRegistration.StartupArgument);
+        if (fromWindowsStartup && !StartupRegistration.IsEnabled)
+        {
+            Shutdown();
+            return;
+        }
+
+        StartupRegistration.RemoveOwnEntryIfInstalled();
+
         _instance = new Mutex(true, InstanceName, out var isFirstCopy);
         _showRequest = new EventWaitHandle(false, EventResetMode.AutoReset, ShowRequestName);
 
@@ -38,7 +48,7 @@ public partial class App : Application
             return;
         }
 
-        var showWindow = !e.Args.Contains(StartupRegistration.TrayArgument);
+        var showWindow = !fromWindowsStartup && !e.Args.Contains(StartupRegistration.TrayArgument);
         _updater = new AppUpdater();
 
         // An update chosen for later installs now, before the window opens. The updater opens the app again afterwards.

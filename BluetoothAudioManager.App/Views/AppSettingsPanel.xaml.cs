@@ -34,7 +34,7 @@ public partial class AppSettingsPanel : UserControl
     /// <summary>Raised when Check now finds a ready update.</summary>
     public event Action<string>? UpdateFoundByCheck;
 
-    /// <summary>Shows the current settings. Start with Windows is read again, as the tray menu can change it too.</summary>
+    /// <summary>Shows the current settings. Start with Windows is read again, as the tray menu and Task Manager can change it too.</summary>
     public void Show(AppSettings settings)
     {
         _settings = settings;
@@ -120,7 +120,8 @@ public partial class AppSettingsPanel : UserControl
 
     private void StartupToggle_Click(object sender, RoutedEventArgs e)
     {
-        StartupRegistration.SetEnabled(StartupToggle.IsChecked == true);
+        // Shows what actually happened, as turning it on can't undo Task Manager turning it off for everyone.
+        StartupToggle.IsChecked = StartupRegistration.SetEnabled(StartupToggle.IsChecked == true);
         UpdateText();
     }
 

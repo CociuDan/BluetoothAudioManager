@@ -30,11 +30,12 @@ internal sealed class TrayIcon : IDisposable
             CheckOnClick = true,
             Checked = StartupRegistration.IsEnabled,
         };
-        startWithWindows.Click += (_, _) => StartupRegistration.SetEnabled(startWithWindows.Checked);
+        // Shows what actually happened, as turning it on can't undo Task Manager turning it off for everyone.
+        startWithWindows.Click += (_, _) => startWithWindows.Checked = StartupRegistration.SetEnabled(startWithWindows.Checked);
 
         _menu = new Forms.ContextMenuStrip();
 
-        // The window's settings can change it too, so it's read again each time the menu opens.
+        // The window's settings and Task Manager can change it too, so it's read again each time the menu opens.
         _menu.Opening += (_, _) => startWithWindows.Checked = StartupRegistration.IsEnabled;
 
         // Hidden until an update is downloaded.
