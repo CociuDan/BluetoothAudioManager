@@ -49,8 +49,9 @@ public static class UpdaterPipe
     {
         return status.State switch
         {
-            UpdateState.Ready when status.Version is { } version =>
-                $"{ReadyReply} {FormatReleaseNotes(version, status.Notes ?? "")}",
+            UpdateState.Ready when status.Version is { } version && status.Notes is { } notes =>
+                $"{ReadyReply} {FormatReleaseNotes(version, notes)}",
+            UpdateState.Ready when status.Version is { } version => $"{ReadyReply} {version}",
             UpdateState.Ready => FailedReply,
             UpdateState.None => NoneReply,
             _ => FailedReply,
