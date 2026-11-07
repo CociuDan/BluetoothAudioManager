@@ -28,9 +28,6 @@ public partial class AppSettingsPanel : UserControl
     /// <summary>Raised when the ready update is chosen for installation.</summary>
     public event Action? UpdateClicked;
 
-    /// <summary>Raised when settings should return to the device view.</summary>
-    public event Action? BackClicked;
-
     /// <summary>Raised when Check now finds a ready update.</summary>
     public event Action<string>? UpdateFoundByCheck;
 
@@ -61,8 +58,6 @@ public partial class AppSettingsPanel : UserControl
         CheckNowButton.Content = "Update now";
         ShowUpdates();
     }
-
-    private void BackButton_Click(object sender, RoutedEventArgs e) => BackClicked?.Invoke();
 
     private async void CheckNowButton_Click(object sender, RoutedEventArgs e)
     {

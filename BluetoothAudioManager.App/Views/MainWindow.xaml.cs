@@ -117,7 +117,6 @@ public partial class MainWindow : Window
         };
 
         AirPodsHeader.SettingsClicked += ToggleSettings;
-        AppSettingsView.BackClicked += () => ShowAppSettings(false);
         AppSettingsView.UpdateClicked += () => UpdateClicked?.Invoke();
         AppSettingsView.UpdateFoundByCheck += version => ShowUpdateReady(version, explicitlyChecked: true);
 

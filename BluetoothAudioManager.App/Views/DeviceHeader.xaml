@@ -69,7 +69,7 @@
                        MouseEnter="Handle_MouseChanged" MouseLeave="Handle_MouseChanged"
                        ToolTipOpening="TitleText_ToolTipOpening" />
             <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
-                <Button x:Name="OutputButton" Style="{StaticResource HeaderIconButtonStyle}" Content="&#xE7F6;"
+                <Button x:Name="OutputButton" Style="{StaticResource HeaderIconButtonStyle}" Content="&#xE767;"
                         Click="OutputButton_Click" IsEnabled="False" Margin="0,0,8,0"
                         ToolTip="Use as system output" AutomationProperties.Name="Use as system output" />
                 <Button x:Name="ConnectButton" Style="{StaticResource HeaderTextButtonStyle}" Content="Connect"
