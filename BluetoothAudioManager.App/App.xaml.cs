@@ -94,7 +94,7 @@ public partial class App : Application
     {
         _trayIcon?.ShowUpdate(version);
         _window?.ShowUpdateReady(version);
-        _updateNotification?.Show(version);
+        // _updateNotification?.Show(version);
     }
 
     private async void CheckForUpdates()
@@ -106,7 +106,7 @@ public partial class App : Application
 
         var status = await _updater.CheckNowAsync();
 
-        // A new version is announced by the notification, the tray menu and the window, as usual.
+        // A new version is announced by the tray menu and the window, as usual.
         switch (status.State)
         {
             case UpdateState.None:
