@@ -26,7 +26,6 @@ public sealed class UpdateWorker : BackgroundService
     private UpdateStatus _status = new(UpdateState.None);
     private ReleaseSetup? _ready;
     private int _installing;
-    private int _preparing;
 
     protected override async Task ExecuteAsync(CancellationToken stop)
     {
@@ -146,6 +145,16 @@ public sealed class UpdateWorker : BackgroundService
                 return _status;
             }
 
+            // Already downloaded and unpacked, there's nothing to do but keep offering it.
+            if (_status is { State: UpdateState.Ready } ready && ready.Version == latest.Version && _ready is not null)
+            {
+                return _status;
+            }
+
+            // Asked meanwhile, the status says how far it got, which the app's settings show.
+            _ready = null;
+            _status = new UpdateStatus(UpdateState.Downloading, latest.Version);
+
             // A newer download always replaces the one before, as there's only ever this one file.
             PrepareUpdateFolder(Path.GetDirectoryName(path)!);
             await _github.DownloadAsync(latest, path, stop);
@@ -165,14 +174,15 @@ public sealed class UpdateWorker : BackgroundService
                 notes = "Changelog isn't available right now.";
             }
 
-            if (_status.Version != latest.Version)
-            {
-                UpdaterLog.Write($"Version {latest.Version} is downloaded and ready.");
-            }
+            UpdaterLog.Write($"Version {latest.Version} is downloaded.");
+            _status = new UpdateStatus(UpdateState.Preparing, latest.Version);
+            await PrepareAsync(latest, path, stop);
 
+            // Offered once unpacked, so installing only switches folders. If unpacking failed, installing takes the
+            // longer way instead.
+            UpdaterLog.Write($"Version {latest.Version} is ready.");
             _ready = latest;
             _status = new UpdateStatus(UpdateState.Ready, latest.Version, notes);
-            StartPreparing(latest, path, stop);
             return _status;
         }
         catch (OperationCanceledException) when (stop.IsCancellationRequested)
@@ -183,7 +193,12 @@ public sealed class UpdateWorker : BackgroundService
         {
             UpdaterLog.Write($"Couldn't check for updates: {exception.Message}");
 
-            // A version already downloaded can still be installed.
+            // A version already downloaded can still be installed. One that didn't finish downloading isn't offered.
+            if (_status.State != UpdateState.Ready)
+            {
+                _status = new UpdateStatus(UpdateState.None);
+            }
+
             return _status.State == UpdateState.Ready ? _status : new UpdateStatus(UpdateState.Failed);
         }
         finally
@@ -193,41 +208,32 @@ public sealed class UpdateWorker : BackgroundService
     }
 
     /// <summary>
-    /// Has the downloaded installer unpack the new app into the .update folder in the background, so updating later
-    /// only swaps folders. Until that's done, or if it fails, updating takes the longer way.
+    /// Has the downloaded installer unpack the new app into the .update folder, so updating later only swaps folders.
+    /// If that fails, updating takes the longer way.
     /// </summary>
-    private void StartPreparing(ReleaseSetup setup, string path, CancellationToken stop)
+    private static async Task PrepareAsync(ReleaseSetup setup, string path, CancellationToken stop)
     {
-        if (InstallLayout.InstallFolder is not { } installFolder
-            || InstallLayout.StagedVersion(installFolder) == setup.Version
-            || Interlocked.Exchange(ref _preparing, 1) == 1)
+        if (InstallLayout.InstallFolder is not { } installFolder || InstallLayout.StagedVersion(installFolder) == setup.Version)
         {
             return;
         }
 
-        _ = Task.Run(async () =>
+        try
         {
-            try
+            // Checked again just before it runs with administrator rights.
+            if (await GitHubReleases.MatchesAsync(path, setup.Sha256, stop))
             {
-                // Checked again just before it runs with administrator rights.
-                if (await GitHubReleases.MatchesAsync(path, setup.Sha256, stop))
+                using var process = Process.Start(SetupStart(path, InstallLayout.PrepareArgument));
+                if (process is not null)
                 {
-                    using var process = Process.Start(SetupStart(path, InstallLayout.PrepareArgument));
-                    if (process is not null)
-                    {
-                        await process.WaitForExitAsync(stop);
-                    }
+                    await process.WaitForExitAsync(stop);
                 }
             }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                UpdaterLog.Write($"Couldn't unpack version {setup.Version} ahead of time: {exception.Message}");
-            }
-            finally
-            {
-                Interlocked.Exchange(ref _preparing, 0);
-            }
-        }, stop);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            UpdaterLog.Write($"Couldn't unpack version {setup.Version} ahead of time: {exception.Message}");
+        }
     }
 
     /// <summary>
@@ -260,7 +266,7 @@ public sealed class UpdateWorker : BackgroundService
 
             UpdaterLog.Write($"Installing version {ready.Version}, asked from session {client.SessionId}.");
 
-            if (Volatile.Read(ref _preparing) == 0 && InstallLayout.StagedVersion(installFolder) == ready.Version)
+            if (InstallLayout.StagedVersion(installFolder) == ready.Version)
             {
                 // Answered first, so the app closes, which the swap waits for.
                 _ = Task.Run(() => SwapInPreparedApp(path, installFolder, client.SessionId, showWindow, ready.Version));

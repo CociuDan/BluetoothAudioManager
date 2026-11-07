@@ -85,6 +85,13 @@ internal sealed class AppUpdater : IDisposable
         return status;
     }
 
+    /// <summary>
+    /// Asks the updater how far it is right now, such as downloading or unpacking a new version, without waiting for it.
+    /// A build that wasn't installed has nothing to ask.
+    /// </summary>
+    public async Task<UpdateStatus> StatusNowAsync() =>
+        IsInstalled ? await StatusAsync() : new UpdateStatus(UpdateState.None);
+
     /// <summary>Reads the latest published release notes through the updater, which has access to the private repository.</summary>
     public async Task<(string Version, string Notes)?> LatestReleaseNotesAsync()
     {

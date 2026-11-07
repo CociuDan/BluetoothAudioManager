@@ -13,6 +13,8 @@ public class UpdaterPipeTests
                  {
                      new UpdateStatus(UpdateState.Ready, "0.0.3"),
                      new UpdateStatus(UpdateState.Ready, "0.0.4", "## Changes\n\n- Added a feature\n- Fixed a bug"),
+                     new UpdateStatus(UpdateState.Downloading, "0.0.5"),
+                     new UpdateStatus(UpdateState.Preparing, "0.0.5"),
                      new UpdateStatus(UpdateState.None),
                      new UpdateStatus(UpdateState.Failed),
                  })
@@ -31,6 +33,8 @@ public class UpdaterPipeTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("ready")]
+    [InlineData("downloading")]
+    [InlineData("preparing")]
     [InlineData("something else")]
     public void Parse_AnythingElse_IsFailed(string? reply)
     {

@@ -15,7 +15,7 @@ public static class UpdaterPipe
 {
     public const string PipeName = "BluetoothAudioManager.Updater";
 
-    /// <summary>Answers with the status.</summary>
+    /// <summary>Answers with the status, including whether a new version is downloading or being unpacked.</summary>
     public const string StatusCommand = "status";
 
     /// <summary>Checks GitHub now, downloads any update, then answers with the status.</summary>
@@ -52,6 +52,8 @@ public static class UpdaterPipe
     private const string NoneReply = "none";
     private const string ReadyReply = "ready";
     private const string FailedReply = "failed";
+    private const string DownloadingReply = "downloading";
+    private const string PreparingReply = "preparing";
 
     public static string Format(UpdateStatus status)
     {
@@ -61,6 +63,8 @@ public static class UpdaterPipe
                 $"{ReadyReply} {FormatReleaseNotes(version, notes)}",
             UpdateState.Ready when status.Version is { } version => $"{ReadyReply} {version}",
             UpdateState.Ready => FailedReply,
+            UpdateState.Downloading when status.Version is { } version => $"{DownloadingReply} {version}",
+            UpdateState.Preparing when status.Version is { } version => $"{PreparingReply} {version}",
             UpdateState.None => NoneReply,
             _ => FailedReply,
         };
@@ -81,6 +85,8 @@ public static class UpdaterPipe
 
         return parts switch
         {
+            [DownloadingReply, var version] => new UpdateStatus(UpdateState.Downloading, version),
+            [PreparingReply, var version] => new UpdateStatus(UpdateState.Preparing, version),
             [NoneReply] => new UpdateStatus(UpdateState.None),
             _ => new UpdateStatus(UpdateState.Failed),
         };

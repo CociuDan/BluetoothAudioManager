@@ -4,6 +4,7 @@ using System.Windows.Input;
 using BluetoothAudioManager.App.Models;
 using BluetoothAudioManager.App.Services;
 using BluetoothAudioManager.Shared.Enums;
+using BluetoothAudioManager.Shared.Models;
 
 namespace BluetoothAudioManager.App.Views;
 
@@ -12,6 +13,10 @@ namespace BluetoothAudioManager.App.Views;
 /// </summary>
 public partial class AppSettingsPanel : UserControl
 {
+    private const string CheckingText = "Checking…";
+
+    private static readonly TimeSpan StageCheckEvery = TimeSpan.FromMilliseconds(500);
+
     private AppSettings? _settings;
     private bool _showing;
     private bool _checking;
@@ -42,6 +47,7 @@ public partial class AppSettingsPanel : UserControl
         UpdateText();
         ShowAutomaticUpdates();
         ShowUpdates();
+        FollowWorkInProgress();
     }
 
     private void ShowUpdates()
@@ -74,13 +80,64 @@ public partial class AppSettingsPanel : UserControl
 
         _checking = true;
         CheckNowButton.IsEnabled = false;
-        CheckNowButton.Content = "Checking…";
+        CheckNowButton.Content = CheckingText;
 
-        var status = await Updater.CheckNowAsync();
+        // The check answers once a new version is downloaded and unpacked, so meanwhile the button follows how far it got.
+        var check = Updater.CheckNowAsync();
+        while (await Task.WhenAny(check, Task.Delay(StageCheckEvery)) != check)
+        {
+            ShowStage(await Updater.StatusNowAsync());
+        }
+
+        FinishWorking(await check, foundByCheck: true);
+    }
+
+    // A download the updater started by itself shows the same way, until it's ready.
+    private async void FollowWorkInProgress()
+    {
+        if (Updater is null || _checking || _updateReady)
+        {
+            return;
+        }
+
+        var status = await Updater.StatusNowAsync();
+        if (status.State is not (UpdateState.Downloading or UpdateState.Preparing))
+        {
+            return;
+        }
+
+        _checking = true;
+        CheckNowButton.IsEnabled = false;
+        while (status.State is UpdateState.Downloading or UpdateState.Preparing)
+        {
+            ShowStage(status);
+            await Task.Delay(StageCheckEvery);
+            status = await Updater.StatusNowAsync();
+        }
+
+        // Announced by the app's regular look at the updater, as it found it by itself.
+        FinishWorking(status, foundByCheck: false);
+    }
+
+    private void ShowStage(UpdateStatus status)
+    {
+        CheckNowButton.Content = status.State switch
+        {
+            UpdateState.Downloading => "Downloading…",
+            UpdateState.Preparing => "Installing…",
+            _ => CheckingText,
+        };
+    }
+
+    private void FinishWorking(UpdateStatus status, bool foundByCheck)
+    {
         if (status is { State: UpdateState.Ready, Version: { } version })
         {
             ShowUpdateReady();
-            UpdateFoundByCheck?.Invoke(version);
+            if (foundByCheck)
+            {
+                UpdateFoundByCheck?.Invoke(version);
+            }
         }
 
         CheckNowButton.Content = _updateReady ? "Update now" : "Check now";
