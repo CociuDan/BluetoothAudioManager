@@ -20,6 +20,7 @@ internal sealed class AppUpdater : IDisposable
 
     private readonly DispatcherTimer _timer = new() { Interval = AskEvery };
     private string? _announced;
+    private UpdateStatus? _readyStatus;
 
     public AppUpdater()
     {
@@ -47,6 +48,11 @@ internal sealed class AppUpdater : IDisposable
         }
 
         var status = Task.Run(StatusAsync).GetAwaiter().GetResult();
+        if (status.State == UpdateState.Ready)
+        {
+            _readyStatus = status;
+        }
+
         return status is { State: UpdateState.Ready, Version: { } version } ? version : null;
     }
 
@@ -76,6 +82,11 @@ internal sealed class AppUpdater : IDisposable
         if (!IsInstalled)
         {
             return null;
+        }
+
+        if (_readyStatus is { State: UpdateState.Ready, Version: { } version, Notes: { } notes })
+        {
+            return (version, notes);
         }
 
         var reply = await UpdaterPipe.SendAsync(UpdaterPipe.ReleaseNotesCommand, ReleaseNotesTimeout);
@@ -124,6 +135,7 @@ internal sealed class AppUpdater : IDisposable
     // Each new version is announced once.
     private void Announce(UpdateStatus status)
     {
+        _readyStatus = status.State == UpdateState.Ready ? status : null;
         if (status is { State: UpdateState.Ready, Version: { } version } && version != _announced)
         {
             _announced = version;

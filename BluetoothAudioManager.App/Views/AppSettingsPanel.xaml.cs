@@ -28,6 +28,12 @@ public partial class AppSettingsPanel : UserControl
     /// <summary>Raised when the ready update is chosen for installation.</summary>
     public event Action? UpdateClicked;
 
+    /// <summary>Raised when settings should return to the device view.</summary>
+    public event Action? BackClicked;
+
+    /// <summary>Raised when Check now finds a ready update.</summary>
+    public event Action<string>? UpdateFoundByCheck;
+
     /// <summary>Shows the current settings. Start with Windows is read again, as the tray menu can change it too.</summary>
     public void Show(AppSettings settings)
     {
@@ -43,7 +49,9 @@ public partial class AppSettingsPanel : UserControl
 
     private void ShowUpdates()
     {
-        UpdatesRow.Visibility = Updater?.IsInstalled == true ? Visibility.Visible : Visibility.Collapsed;
+        UpdatesRow.Visibility = Updater?.IsInstalled == true && !_updateReady
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     /// <summary>Changes the update action to installation once the updater has a ready version.</summary>
@@ -51,7 +59,10 @@ public partial class AppSettingsPanel : UserControl
     {
         _updateReady = true;
         CheckNowButton.Content = "Update now";
+        ShowUpdates();
     }
+
+    private void BackButton_Click(object sender, RoutedEventArgs e) => BackClicked?.Invoke();
 
     private async void CheckNowButton_Click(object sender, RoutedEventArgs e)
     {
@@ -71,9 +82,10 @@ public partial class AppSettingsPanel : UserControl
         CheckNowButton.Content = "Checking…";
 
         var status = await Updater.CheckNowAsync();
-        if (status.State == UpdateState.Ready)
+        if (status is { State: UpdateState.Ready, Version: { } version })
         {
             ShowUpdateReady();
+            UpdateFoundByCheck?.Invoke(version);
         }
 
         CheckNowButton.Content = _updateReady ? "Update now" : "Check now";

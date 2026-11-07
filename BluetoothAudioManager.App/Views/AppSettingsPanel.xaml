@@ -6,7 +6,15 @@
     </UserControl.Resources>
     <!-- The app's own settings, shown in the window in place of the devices while the gear is on. -->
     <StackPanel>
-        <TextBlock Text="Settings" FontSize="18" FontWeight="SemiBold" />
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Settings" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Back" Height="30" MinWidth="64" Padding="12,0"
+                    Click="BackButton_Click" />
+        </Grid>
 
         <Grid Margin="0,20,0,0">
             <Grid.ColumnDefinitions>

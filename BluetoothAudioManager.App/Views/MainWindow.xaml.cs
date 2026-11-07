@@ -58,6 +58,7 @@ public partial class MainWindow : Window
     private double _allDevicesHeight;
     private DateTimeOffset _lastHiddenByClickAway;
     private bool _closeAllowed;
+    private bool _updateBarDismissed;
     private string? _airPodsName;
     private string? _readyUpdateVersion;
     private AirPodsFamily? _airPodsFamily;
@@ -116,7 +117,9 @@ public partial class MainWindow : Window
         };
 
         AirPodsHeader.SettingsClicked += ToggleSettings;
+        AppSettingsView.BackClicked += () => ShowAppSettings(false);
         AppSettingsView.UpdateClicked += () => UpdateClicked?.Invoke();
+        AppSettingsView.UpdateFoundByCheck += version => ShowUpdateReady(version, explicitlyChecked: true);
 
         // While a device is dragged, the area holding the devices has the mouse, so these follow it to the drop.
         AirPodsHeader.DragStarted += () => StartDrag(AirPodsSection);
@@ -188,11 +191,6 @@ public partial class MainWindow : Window
 
     public void ShowInCorner()
     {
-        if (_readyUpdateVersion is not null)
-        {
-            UpdateBar.Visibility = Visibility.Visible;
-        }
-
         ArrangeRows();
         SizeToDevices();
         PositionInCorner();
@@ -213,12 +211,17 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Shows the bar offering to install a downloaded update.</summary>
-    public void ShowUpdateReady(string version)
+    public void ShowUpdateReady(string version, bool explicitlyChecked = false)
     {
         _readyUpdateVersion = version;
         AppSettingsView.ShowUpdateReady();
         UpdateText.Text = $"Version {version} is ready";
-        UpdateBar.Visibility = Visibility.Visible;
+        if (explicitlyChecked)
+        {
+            _updateBarDismissed = false;
+        }
+
+        UpdateBar.Visibility = _updateBarDismissed ? Visibility.Collapsed : Visibility.Visible;
 
         if (IsVisible)
         {
@@ -706,6 +709,7 @@ public partial class MainWindow : Window
 
     private void DismissUpdateButton_Click(object sender, RoutedEventArgs e)
     {
+        _updateBarDismissed = true;
         UpdateBar.Visibility = Visibility.Collapsed;
         if (IsVisible)
         {

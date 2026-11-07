@@ -45,19 +45,33 @@ public static class UpdaterPipe
     private const string ReadyReply = "ready";
     private const string FailedReply = "failed";
 
-    public static string Format(UpdateStatus status) => status.State switch
+    public static string Format(UpdateStatus status)
     {
-        UpdateState.Ready => $"{ReadyReply} {status.Version}",
-        UpdateState.None => NoneReply,
-        _ => FailedReply,
-    };
+        return status.State switch
+        {
+            UpdateState.Ready when status.Version is { } version =>
+                $"{ReadyReply} {FormatReleaseNotes(version, status.Notes ?? "")}",
+            UpdateState.Ready => FailedReply,
+            UpdateState.None => NoneReply,
+            _ => FailedReply,
+        };
+    }
 
     public static UpdateStatus Parse(string? reply)
     {
         var parts = (reply ?? "").Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        if (parts is [ReadyReply, var readyData])
+        {
+            if (ParseReleaseNotes(readyData) is { } release)
+            {
+                return new UpdateStatus(UpdateState.Ready, release.Version, release.Notes);
+            }
+
+            return new UpdateStatus(UpdateState.Ready, readyData);
+        }
+
         return parts switch
         {
-            [ReadyReply, var version] => new UpdateStatus(UpdateState.Ready, version),
             [NoneReply] => new UpdateStatus(UpdateState.None),
             _ => new UpdateStatus(UpdateState.Failed),
         };

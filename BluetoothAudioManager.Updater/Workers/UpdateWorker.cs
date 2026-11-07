@@ -111,13 +111,28 @@ public sealed class UpdateWorker : BackgroundService
             PrepareUpdateFolder(Path.GetDirectoryName(path)!);
             await _github.DownloadAsync(latest, path, stop);
 
+            string notes;
+            try
+            {
+                notes = await _github.ReleaseNotesAsync(latest, stop);
+            }
+            catch (OperationCanceledException) when (stop.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                UpdaterLog.Write($"Couldn't fetch release notes for version {latest.Version}: {exception.Message}");
+                notes = "Changelog isn't available right now.";
+            }
+
             if (_status.Version != latest.Version)
             {
                 UpdaterLog.Write($"Version {latest.Version} is downloaded and ready.");
             }
 
             _ready = latest;
-            _status = new UpdateStatus(UpdateState.Ready, latest.Version);
+            _status = new UpdateStatus(UpdateState.Ready, latest.Version, notes);
             return _status;
         }
         catch (OperationCanceledException) when (stop.IsCancellationRequested)

@@ -77,10 +77,14 @@ public sealed class GitHubReleases : IDisposable
             return null;
         }
 
-        return TryGetCompareRefs(release.Notes, out var baseRef, out var headRef)
-            ? (release.Version, await CommitSummariesAsync(baseRef, headRef, cancel))
-            : (release.Version, release.Notes);
+        return (release.Version, await ReleaseNotesAsync(release, cancel));
     }
+
+    /// <summary>Reads release notes for a release already fetched during an update check.</summary>
+    public Task<string> ReleaseNotesAsync(ReleaseSetup release, CancellationToken cancel) =>
+        TryGetCompareRefs(release.Notes, out var baseRef, out var headRef)
+            ? CommitSummariesAsync(baseRef, headRef, cancel)
+            : Task.FromResult(release.Notes);
 
     private async Task<string> CommitSummariesAsync(string baseRef, string headRef, CancellationToken cancel)
     {

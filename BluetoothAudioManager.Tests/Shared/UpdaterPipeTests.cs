@@ -12,12 +12,19 @@ public class UpdaterPipeTests
         foreach (var status in new[]
                  {
                      new UpdateStatus(UpdateState.Ready, "0.0.3"),
+                     new UpdateStatus(UpdateState.Ready, "0.0.4", "## Changes\n\n- Added a feature\n- Fixed a bug"),
                      new UpdateStatus(UpdateState.None),
                      new UpdateStatus(UpdateState.Failed),
                  })
         {
             Assert.Equal(status, UpdaterPipe.Parse(UpdaterPipe.Format(status)));
         }
+    }
+
+    [Fact]
+    public void Parse_ReadsLegacyReadyStatus()
+    {
+        Assert.Equal(new UpdateStatus(UpdateState.Ready, "0.0.3"), UpdaterPipe.Parse("ready 0.0.3"));
     }
 
     [Theory]
