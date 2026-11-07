@@ -15,6 +15,7 @@ public partial class AppSettingsPanel : UserControl
     private AppSettings? _settings;
     private bool _showing;
     private bool _checking;
+    private bool _updateReady;
 
     public AppSettingsPanel()
     {
@@ -23,6 +24,9 @@ public partial class AppSettingsPanel : UserControl
 
     /// <summary>The updater to ask about checking automatically, set by the app. Without one, that setting isn't shown.</summary>
     internal AppUpdater? Updater { get; set; }
+
+    /// <summary>Raised when the ready update is chosen for installation.</summary>
+    public event Action? UpdateClicked;
 
     /// <summary>Shows the current settings. Start with Windows is read again, as the tray menu can change it too.</summary>
     public void Show(AppSettings settings)
@@ -37,17 +41,18 @@ public partial class AppSettingsPanel : UserControl
         ShowUpdates();
     }
 
-    // While a check runs, its line and button stay as they are until it answers.
     private void ShowUpdates()
     {
         UpdatesRow.Visibility = Updater?.IsInstalled == true ? Visibility.Visible : Visibility.Collapsed;
-        if (Updater is not null && !_checking)
-        {
-            UpdatesText.Text = $"You have version {Updater.CurrentVersion}";
-        }
     }
 
-    // The same as Check for updates in the tray menu: a new version found is offered as usual, by the notification and the update bar.
+    /// <summary>Changes the update action to installation once the updater has a ready version.</summary>
+    public void ShowUpdateReady()
+    {
+        _updateReady = true;
+        CheckNowButton.Content = "Update now";
+    }
+
     private async void CheckNowButton_Click(object sender, RoutedEventArgs e)
     {
         if (Updater is null || _checking)
@@ -55,20 +60,23 @@ public partial class AppSettingsPanel : UserControl
             return;
         }
 
+        if (_updateReady)
+        {
+            UpdateClicked?.Invoke();
+            return;
+        }
+
         _checking = true;
         CheckNowButton.IsEnabled = false;
         CheckNowButton.Content = "Checking…";
-        UpdatesText.Text = $"Version {Updater.CurrentVersion}. Checking for a new version…";
 
         var status = await Updater.CheckNowAsync();
-        UpdatesText.Text = status switch
+        if (status.State == UpdateState.Ready)
         {
-            { State: UpdateState.Ready, Version: { } version } => $"Version {version} is ready to install",
-            { State: UpdateState.Failed } => "Couldn't reach GitHub. Check your internet connection and try again later",
-            _ => $"Version {Updater.CurrentVersion}, up to date",
-        };
+            ShowUpdateReady();
+        }
 
-        CheckNowButton.Content = "Check now";
+        CheckNowButton.Content = _updateReady ? "Update now" : "Check now";
         CheckNowButton.IsEnabled = true;
         _checking = false;
     }

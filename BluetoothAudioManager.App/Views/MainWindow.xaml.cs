@@ -116,6 +116,7 @@ public partial class MainWindow : Window
         };
 
         AirPodsHeader.SettingsClicked += ToggleSettings;
+        AppSettingsView.UpdateClicked += () => UpdateClicked?.Invoke();
 
         // While a device is dragged, the area holding the devices has the mouse, so these follow it to the drop.
         AirPodsHeader.DragStarted += () => StartDrag(AirPodsSection);
@@ -215,6 +216,7 @@ public partial class MainWindow : Window
     public void ShowUpdateReady(string version)
     {
         _readyUpdateVersion = version;
+        AppSettingsView.ShowUpdateReady();
         UpdateText.Text = $"Version {version} is ready";
         UpdateBar.Visibility = Visibility.Visible;
 
