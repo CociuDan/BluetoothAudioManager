@@ -149,7 +149,7 @@ internal static class UserCleanup
 
     private static void RemoveSettings(RegistryKey user, IEnumerable<string> notificationIds)
     {
-        // Start with the System from versions that set it for one person, and each person's choice about it now.
+        // Start with the System from versions that set it for one person, or kept each person's own choice.
         using (var run = user.OpenSubKey(InstallLayout.RunKeyPath, writable: true))
         {
             run?.DeleteValue(InstallLayout.RunValueName, throwOnMissingValue: false);

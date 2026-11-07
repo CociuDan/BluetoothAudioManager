@@ -111,7 +111,7 @@ internal static class AppInstaller
         var appExe = Path.Combine(InstallLayout.AppFolder(installFolder), InstallLayout.AppExeName);
         var uninstaller = Path.Combine(installFolder, InstallLayout.UninstallerName);
 
-        // Starts the app for everyone who signs in. Each person can still turn it off for themselves in the app.
+        // Starts the app for everyone who signs in. Start with the System in the app, or Task Manager, turns it off for the PC.
         using (var run = machine.CreateSubKey(InstallLayout.RunKeyPath))
         {
             run.SetValue(InstallLayout.RunValueName, $"\"{appExe}\" {InstallLayout.StartupArgument}");

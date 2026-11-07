@@ -7,10 +7,10 @@ using Microsoft.Win32;
 namespace BluetoothAudioManager.App.Services;
 
 /// <summary>
-/// Starting with Windows. The installed app starts for everyone from the entry its installer adds, and this is each
-/// person's choice whether it should, on unless they turn it off. A build that wasn't installed has no such entry,
-/// so it adds one for the current person instead. Either way, turning the app off in Task Manager's Startup apps tab
-/// counts as off here too, and turning it on here undoes that.
+/// Starting with the system. The installed app starts for everyone from the entry its installer adds, and its switch is
+/// the same on or off as Task Manager's Startup apps tab shows, for the whole PC. Changing that needs administrator
+/// rights, so the app asks the updater service. A build that wasn't installed has no such entry, so its switch adds
+/// or removes one for the current person instead.
 /// </summary>
 internal static class StartupRegistration
 {
@@ -20,46 +20,18 @@ internal static class StartupRegistration
     private static readonly bool IsInstalled = InstallLayout.IsInstalledApp();
     private static readonly TimeSpan UpdaterTimeout = TimeSpan.FromSeconds(3);
 
-    public static bool IsEnabled => IsOwnSettingOn && !IsTurnedOffInWindows;
+    public static bool IsEnabled =>
+        IsInstalled
+            ? !IsTurnedOff(Registry.LocalMachine) && !IsTurnedOff(Registry.CurrentUser)
+            : HasOwnEntry && !IsTurnedOff(Registry.CurrentUser);
 
-    /// <summary>
-    /// Turns starting with the system on or off for this person, and returns whether it's on afterwards.
-    /// Turned off for everyone in Task Manager, the installed app asks the updater service to undo that, as it
-    /// needs administrator rights.
-    /// </summary>
+    /// <summary>Turns starting with the system on or off, and returns whether it's on afterwards.</summary>
     public static async Task<bool> SetEnabledAsync(bool enabled)
-    {
-        SetEnabled(enabled);
-
-        if (enabled && IsInstalled && IsTurnedOff(Registry.LocalMachine))
-        {
-            await UpdaterPipe.SendAsync($"{UpdaterPipe.StartupCommand} {UpdaterPipe.OnOption}", UpdaterTimeout);
-        }
-
-        return IsEnabled;
-    }
-
-    /// <summary>
-    /// Removes the entry an earlier version added for this person, as the installer's entry for everyone starts the
-    /// installed app now, and both would start it twice.
-    /// </summary>
-    public static void RemoveOwnEntryIfInstalled()
-    {
-        if (!IsInstalled)
-        {
-            return;
-        }
-
-        using var run = Registry.CurrentUser.OpenSubKey(InstallLayout.RunKeyPath, writable: true);
-        run?.DeleteValue(InstallLayout.RunValueName, false);
-    }
-
-    private static void SetEnabled(bool enabled)
     {
         if (IsInstalled)
         {
-            using var key = Registry.CurrentUser.CreateSubKey(InstallLayout.UserKeyPath);
-            key.SetValue(InstallLayout.StartWithWindowsValue, enabled ? 1 : 0, RegistryValueKind.DWord);
+            await UpdaterPipe.SendAsync(
+                $"{UpdaterPipe.StartupCommand} {(enabled ? UpdaterPipe.OnOption : UpdaterPipe.OffOption)}", UpdaterTimeout);
         }
         else
         {
@@ -74,38 +46,49 @@ internal static class StartupRegistration
             }
         }
 
-        // Turned off here, it stays as Windows has it, as the app closes itself when started anyway.
-        // Turned off for this person in Task Manager, the app can undo it itself.
+        // Settings' Startup page may have turned it off for this person only, which the app can undo itself.
         if (enabled)
         {
             ClearTurnedOff(Registry.CurrentUser);
         }
+
+        return IsEnabled;
     }
 
-    private static bool IsOwnSettingOn
+    /// <summary>
+    /// Removes what earlier versions kept for this person: their own startup entry, which would start the installed app
+    /// a second time beside the entry for everyone, and their own on or off choice, as it's for the whole PC now.
+    /// </summary>
+    public static void RemoveOldPersonalSettingsIfInstalled()
+    {
+        if (!IsInstalled)
+        {
+            return;
+        }
+
+        using (var run = Registry.CurrentUser.OpenSubKey(InstallLayout.RunKeyPath, writable: true))
+        {
+            run?.DeleteValue(InstallLayout.RunValueName, false);
+        }
+
+        Registry.CurrentUser.DeleteSubKeyTree(InstallLayout.UserKeyPath, throwOnMissingSubKey: false);
+    }
+
+    private static bool HasOwnEntry
     {
         get
         {
-            if (IsInstalled)
-            {
-                using var key = Registry.CurrentUser.OpenSubKey(InstallLayout.UserKeyPath);
-                return key?.GetValue(InstallLayout.StartWithWindowsValue) is not int on || on != 0;
-            }
-
             using var run = Registry.CurrentUser.OpenSubKey(InstallLayout.RunKeyPath);
             return run?.GetValue(InstallLayout.RunValueName) is not null;
         }
     }
-
-    // Task Manager's Startup apps tab, or Settings' Startup page, turned the app off for this person or for everyone.
-    private static bool IsTurnedOffInWindows => IsTurnedOff(Registry.CurrentUser) || IsTurnedOff(Registry.LocalMachine);
 
     private static bool IsTurnedOff(RegistryKey root)
     {
         try
         {
             using var key = root.OpenSubKey(InstallLayout.StartupApprovedKeyPath);
-            return key?.GetValue(InstallLayout.RunValueName) is byte[] { Length: > 0 } state && (state[0] & 1) == 1;
+            return StartupApproval.IsOff(key?.GetValue(InstallLayout.RunValueName));
         }
         catch (Exception exception) when (exception is SecurityException or UnauthorizedAccessException or IOException)
         {

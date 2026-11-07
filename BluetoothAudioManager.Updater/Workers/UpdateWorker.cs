@@ -5,6 +5,7 @@ using BluetoothAudioManager.Shared.Models;
 using BluetoothAudioManager.Updater.Models;
 using BluetoothAudioManager.Updater.Services;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Win32;
 
 namespace BluetoothAudioManager.Updater.Workers;
 
@@ -84,8 +85,8 @@ public sealed class UpdateWorker : BackgroundService
                     ? UpdaterPipe.OkReply
                     : UpdaterPipe.Format(new UpdateStatus(UpdateState.Failed));
 
-            case [UpdaterPipe.StartupCommand, UpdaterPipe.OnOption]:
-                return TurnStartupBackOn(client)
+            case [UpdaterPipe.StartupCommand, UpdaterPipe.OnOption or UpdaterPipe.OffOption]:
+                return SetStartup(client, parts[1] == UpdaterPipe.OnOption)
                     ? UpdaterPipe.OkReply
                     : UpdaterPipe.Format(new UpdateStatus(UpdateState.Failed));
 
@@ -95,10 +96,10 @@ public sealed class UpdateWorker : BackgroundService
     }
 
     /// <summary>
-    /// Clears Windows' record that the app was turned off for everyone in Task Manager's Startup apps tab, if the installed
-    /// app is the one asking. Each person's own choice in the app still decides whether it stays open for them.
+    /// Turns starting with the system on or off for everyone on the PC, in the same record Task Manager's Startup apps
+    /// tab keeps, if the installed app is the one asking, so the app and Task Manager always agree.
     /// </summary>
-    private static bool TurnStartupBackOn(PipeClient client)
+    private static bool SetStartup(PipeClient client, bool on)
     {
         if (InstallLayout.InstallFolder is not { } installFolder || !IsInstalledApp(client, installFolder))
         {
@@ -108,14 +109,14 @@ public sealed class UpdateWorker : BackgroundService
         try
         {
             using var machine = InstallLayout.OpenMachineKey();
-            using var approved = machine.OpenSubKey(InstallLayout.StartupApprovedKeyPath, writable: true);
-            approved?.DeleteValue(InstallLayout.RunValueName, throwOnMissingValue: false);
-            UpdaterLog.Write($"Starting with the system turned back on for everyone, from session {client.SessionId}.");
+            using var approved = machine.CreateSubKey(InstallLayout.StartupApprovedKeyPath);
+            approved.SetValue(InstallLayout.RunValueName, StartupApproval.Value(on, DateTime.UtcNow), RegistryValueKind.Binary);
+            UpdaterLog.Write($"Starting with the system turned {(on ? "on" : "off")} for everyone, from session {client.SessionId}.");
             return true;
         }
         catch (Exception exception)
         {
-            UpdaterLog.Write($"Couldn't turn starting with the system back on: {exception.Message}");
+            UpdaterLog.Write($"Couldn't turn starting with the system {(on ? "on" : "off")}: {exception.Message}");
             return false;
         }
     }

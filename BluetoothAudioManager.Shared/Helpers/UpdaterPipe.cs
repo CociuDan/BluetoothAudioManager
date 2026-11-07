@@ -37,8 +37,9 @@ public static class UpdaterPipe
     public const string AutomaticCommand = "automatic";
 
     /// <summary>
-    /// Followed by on, undoes Task Manager's Startup apps tab turning the app off for everyone on the PC, which needs
-    /// administrator rights the app doesn't have, and answers ok. It only clears the app's own entry there.
+    /// Followed by on or off, turns starting the app with the system on or off for everyone on the PC, the same record
+    /// Task Manager's Startup apps tab keeps, which needs administrator rights the app doesn't have, and answers ok.
+    /// It only changes the app's own entry there.
     /// </summary>
     public const string StartupCommand = "startup";
 

@@ -28,15 +28,10 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // Windows starts the installed app for everyone; someone who turned that off gets nothing.
+        // Started by the system as someone signs in, which it skips while turned off in the app or Task Manager.
         var fromWindowsStartup = e.Args.Contains(StartupRegistration.StartupArgument);
-        if (fromWindowsStartup && !StartupRegistration.IsEnabled)
-        {
-            Shutdown();
-            return;
-        }
 
-        StartupRegistration.RemoveOwnEntryIfInstalled();
+        StartupRegistration.RemoveOldPersonalSettingsIfInstalled();
 
         _instance = new Mutex(true, InstanceName, out var isFirstCopy);
         _showRequest = new EventWaitHandle(false, EventResetMode.AutoReset, ShowRequestName);
