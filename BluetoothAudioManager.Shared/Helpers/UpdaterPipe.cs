@@ -8,7 +8,7 @@ namespace BluetoothAudioManager.Shared.Helpers;
 /// <summary>
 /// How the app talks to the updater service: one line asked, one line answered, over a local named pipe.
 /// The app can only ask for the status, a check, the install of what the updater downloaded and checked itself,
-/// or whether it checks by itself, so nothing can use the updater to run files of its own choosing.
+/// release notes, or whether it checks by itself, so nothing can use the updater to run files of its own choosing.
 /// </summary>
 public static class UpdaterPipe
 {
@@ -19,6 +19,9 @@ public static class UpdaterPipe
 
     /// <summary>Checks GitHub now, downloads any update, then answers with the status.</summary>
     public const string CheckCommand = "check";
+
+    /// <summary>Reads the latest release notes from GitHub.</summary>
+    public const string ReleaseNotesCommand = "release-notes";
 
     /// <summary>Installs the ready update once the app closes, then opens it again. Answers ok, or with the status if nothing is ready.</summary>
     public const string InstallCommand = "install";
@@ -36,6 +39,7 @@ public static class UpdaterPipe
     public const string OffOption = "off";
 
     public const string OkReply = "ok";
+    public const string ReleaseNotesUnavailableReply = "unavailable";
 
     private const string NoneReply = "none";
     private const string ReadyReply = "ready";
@@ -57,6 +61,28 @@ public static class UpdaterPipe
             [NoneReply] => new UpdateStatus(UpdateState.None),
             _ => new UpdateStatus(UpdateState.Failed),
         };
+    }
+
+    public static string FormatReleaseNotes(string version, string notes) =>
+        Convert.ToBase64String(Encoding.UTF8.GetBytes($"{version}\n{notes}"));
+
+    public static (string Version, string Notes)? ParseReleaseNotes(string? reply)
+    {
+        if (string.IsNullOrEmpty(reply) || reply == ReleaseNotesUnavailableReply)
+        {
+            return null;
+        }
+
+        try
+        {
+            var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(reply));
+            var separator = decoded.IndexOf('\n');
+            return separator > 0 ? (decoded[..separator], decoded[(separator + 1)..]) : null;
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
     }
 
     /// <summary>Sends one line to the updater and returns its answer, or null if the updater isn't there or doesn't answer in time.</summary>

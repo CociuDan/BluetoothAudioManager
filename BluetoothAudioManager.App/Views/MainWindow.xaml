@@ -78,6 +78,9 @@
                     <TextBlock Text="Bluetooth Audio Manager" Margin="8,0,0,0" FontSize="12" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button x:Name="ReleaseNotesButton" Style="{StaticResource CaptionButton}" Content="&#xE946;" FontSize="13"
+                        Click="ReleaseNotesButton_Click" IsEnabled="False" ToolTip="Release notes"
+                        ToolTipService.ShowOnDisabled="True" AutomationProperties.Name="Release notes" />
                     <!-- The same size as the X, with the device rows' settings glyph. Highlighted while the settings are open. -->
                     <Button x:Name="SettingsButton" Style="{StaticResource CaptionButton}" Content="&#xE713;" FontSize="13"
                             Click="SettingsButton_Click" ToolTip="Settings" AutomationProperties.Name="Settings" />
@@ -119,6 +122,23 @@
             <!-- The app's settings, in place of the devices while the gear is on. -->
             <ScrollViewer x:Name="AppSettingsArea" Grid.Row="2" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                 <local:AppSettingsPanel x:Name="AppSettingsView" Margin="30,16,20,20" />
+            </ScrollViewer>
+
+            <ScrollViewer x:Name="ReleaseNotesArea" Grid.Row="2" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="30,16,20,20">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="What's new" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Content="Back" Height="30" MinWidth="64" Padding="12,0"
+                                Click="ReleaseNotesBackButton_Click" />
+                    </Grid>
+                    <TextBlock x:Name="ReleaseNotesVersion" FontSize="12" Margin="0,8,0,12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <TextBlock x:Name="ReleaseNotesText" FontSize="13" TextWrapping="Wrap" />
+                </StackPanel>
             </ScrollViewer>
 
             <!-- Hidden as a whole while the settings are open, so the devices and the no-devices message keep their own state. -->

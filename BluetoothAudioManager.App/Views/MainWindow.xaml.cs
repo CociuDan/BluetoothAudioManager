@@ -43,6 +43,7 @@ public partial class MainWindow : Window
     private readonly EarDetector _earDetector = new();
     private readonly LowBatteryWatcher _lowBatteryWatcher = new();
     private DefaultOutputWatcher? _outputWatcher;
+    private AppUpdater? _updater;
     private readonly DispatcherTimer _earDetectionTimer = new() { Interval = TimeSpan.FromMilliseconds(200) };
     private readonly SemaphoreSlim _earActionGate = new(1, 1);
     private (bool Left, bool Right)? _lastInEar;
@@ -197,7 +198,12 @@ public partial class MainWindow : Window
     public void AllowClose() => _closeAllowed = true;
 
     /// <summary>Gives the settings the updater to ask whether it checks for updates by itself.</summary>
-    internal void UseUpdater(AppUpdater updater) => AppSettingsView.Updater = updater;
+    internal void UseUpdater(AppUpdater updater)
+    {
+        _updater = updater;
+        AppSettingsView.Updater = updater;
+        ReleaseNotesButton.IsEnabled = updater.IsInstalled;
+    }
 
     /// <summary>Shows the bar offering to install a downloaded update.</summary>
     public void ShowUpdateReady(string version)
@@ -691,9 +697,54 @@ public partial class MainWindow : Window
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e) => ShowAppSettings(AppSettingsArea.Visibility != Visibility.Visible);
 
+    private async void ReleaseNotesButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updater is null || !_updater.IsInstalled)
+        {
+            return;
+        }
+
+        ShowAppSettings(false);
+        DevicesView.Visibility = Visibility.Collapsed;
+        ReleaseNotesArea.Visibility = Visibility.Visible;
+        ReleaseNotesVersion.Text = "Loading...";
+        ReleaseNotesText.Text = "";
+        ReleaseNotesButton.IsEnabled = false;
+
+        try
+        {
+            if (await _updater.LatestReleaseNotesAsync() is { } release)
+            {
+                ReleaseNotesVersion.Text = $"Version {release.Version}";
+                ReleaseNotesText.Text = string.IsNullOrWhiteSpace(release.Notes)
+                    ? "No release notes are available for this version."
+                    : release.Notes;
+            }
+            else
+            {
+                ReleaseNotesVersion.Text = "";
+                ReleaseNotesText.Text = "Couldn't load release notes. Try again later.";
+            }
+        }
+        finally
+        {
+            ReleaseNotesButton.IsEnabled = true;
+        }
+
+        ReleaseNotesArea.ScrollToTop();
+    }
+
+    private void ReleaseNotesBackButton_Click(object sender, RoutedEventArgs e)
+    {
+        ReleaseNotesArea.Visibility = Visibility.Collapsed;
+        DevicesView.Visibility = Visibility.Visible;
+        DevicesScroller.ScrollToTop();
+    }
+
     // The app's settings take the devices' place, and the gear stays highlighted while they're open.
     private void ShowAppSettings(bool open)
     {
+        ReleaseNotesArea.Visibility = Visibility.Collapsed;
         if (open)
         {
             AppSettingsView.Show(_settings);

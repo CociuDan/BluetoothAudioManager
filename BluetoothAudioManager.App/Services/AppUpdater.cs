@@ -16,6 +16,7 @@ internal sealed class AppUpdater : IDisposable
 
     // A check downloads any new version before answering, which can take a while.
     private static readonly TimeSpan CheckTimeout = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan ReleaseNotesTimeout = TimeSpan.FromSeconds(15);
 
     private readonly DispatcherTimer _timer = new() { Interval = AskEvery };
     private string? _announced;
@@ -67,6 +68,18 @@ internal sealed class AppUpdater : IDisposable
         var status = UpdaterPipe.Parse(await UpdaterPipe.SendAsync(UpdaterPipe.CheckCommand, CheckTimeout));
         Announce(status);
         return status;
+    }
+
+    /// <summary>Reads the latest published release notes through the updater, which has access to the private repository.</summary>
+    public async Task<(string Version, string Notes)?> LatestReleaseNotesAsync()
+    {
+        if (!IsInstalled)
+        {
+            return null;
+        }
+
+        var reply = await UpdaterPipe.SendAsync(UpdaterPipe.ReleaseNotesCommand, ReleaseNotesTimeout);
+        return UpdaterPipe.ParseReleaseNotes(reply);
     }
 
     /// <summary>

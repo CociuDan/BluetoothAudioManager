@@ -29,4 +29,23 @@ public class UpdaterPipeTests
     {
         Assert.Equal(new UpdateStatus(UpdateState.Failed), UpdaterPipe.Parse(reply));
     }
+
+    [Fact]
+    public void ParseReleaseNotes_RoundTripsMultilineMarkdown()
+    {
+        const string version = "0.0.4";
+        const string notes = "## What's changed\n\n- Added a feature\n- Fixed a bug";
+
+        Assert.Equal((version, notes), UpdaterPipe.ParseReleaseNotes(UpdaterPipe.FormatReleaseNotes(version, notes)));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("unavailable")]
+    [InlineData("not base64!")]
+    public void ParseReleaseNotes_InvalidReply_IsNull(string? reply)
+    {
+        Assert.Null(UpdaterPipe.ParseReleaseNotes(reply));
+    }
 }

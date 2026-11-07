@@ -46,6 +46,10 @@ public sealed class GitHubReleases : IDisposable
             return null;
         }
 
+        var notes = json.RootElement.TryGetProperty("body", out var body) && body.ValueKind == JsonValueKind.String
+            ? body.GetString() ?? ""
+            : "";
+
         foreach (var asset in json.RootElement.GetProperty("assets").EnumerateArray())
         {
             if (asset.GetProperty("name").GetString() == InstallLayout.SetupFileName
@@ -54,7 +58,7 @@ public sealed class GitHubReleases : IDisposable
                 && value.StartsWith(DigestPrefix, StringComparison.OrdinalIgnoreCase)
                 && asset.GetProperty("url").GetString() is { } url)
             {
-                return new ReleaseSetup(version, url, value[DigestPrefix.Length..].ToLowerInvariant());
+                return new ReleaseSetup(version, url, value[DigestPrefix.Length..].ToLowerInvariant(), notes);
             }
         }
 
