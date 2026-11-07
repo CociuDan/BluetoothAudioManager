@@ -3,6 +3,7 @@ using System.Windows.Threading;
 using BluetoothAudioManager.App.Services;
 using BluetoothAudioManager.App.Views;
 using BluetoothAudioManager.Shared.Enums;
+using BluetoothAudioManager.Shared.Helpers;
 
 namespace BluetoothAudioManager.App;
 
@@ -47,7 +48,9 @@ public partial class App : Application
         _updater = new AppUpdater();
 
         // An update chosen for later installs now, before the window opens. The updater opens the app again afterwards.
-        if (_updater.ReadyVersionNow() is not null
+        // Opened by the updater just after updating, there's nothing to ask, and the updater may still be restarting.
+        if (!e.Args.Contains(InstallLayout.UpdatedArgument)
+            && _updater.ReadyVersionNow() is not null
             && Task.Run(() => _updater.InstallAsync(showWindow)).GetAwaiter().GetResult())
         {
             Shutdown();

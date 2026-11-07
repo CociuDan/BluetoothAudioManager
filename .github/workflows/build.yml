@@ -70,9 +70,10 @@ jobs:
           if (-not $env:UpdateToken) {
             throw "The UPDATE_TOKEN secret is missing, so the app couldn't update itself. Add it in the repository's Settings, Secrets and variables, Actions."
           }
-          dotnet publish BluetoothAudioManager.App --configuration Release --runtime win-x64 --self-contained --output package/app -p:Version=$env:VERSION
+          # Precompiled (ReadyToRun), so the app and the updater start without compiling themselves first.
+          dotnet publish BluetoothAudioManager.App --configuration Release --runtime win-x64 --self-contained --output package/app -p:Version=$env:VERSION -p:PublishReadyToRun=true
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          dotnet publish BluetoothAudioManager.Updater --configuration Release --output package/updater -p:Version=$env:VERSION
+          dotnet publish BluetoothAudioManager.Updater --configuration Release --output package/updater -p:Version=$env:VERSION -p:PublishReadyToRun=true
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Compress-Archive -Path package/app, package/updater -DestinationPath package/BluetoothAudioManager.zip
 

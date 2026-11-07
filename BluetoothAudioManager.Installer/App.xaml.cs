@@ -9,7 +9,7 @@ namespace BluetoothAudioManager.Installer;
 
 /// <summary>
 /// Installs the app, uninstalls it when started with --uninstall, as Installed apps and the Start menu shortcut do,
-/// or updates it without any pages when started with --update, as the updater service does.
+/// or prepares and finishes updates without any pages, as the updater service asks.
 /// </summary>
 public partial class App : Application
 {
@@ -19,7 +19,22 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // Run by the updater service to update, without any pages.
+        // Run by the updater service, without any pages: to unpack a download ahead of time, to finish an update
+        // after it swapped in the new app, or to do the whole update.
+        if (e.Args.Contains(InstallLayout.PrepareArgument))
+        {
+            UpdatePreparation.Run();
+            Shutdown();
+            return;
+        }
+
+        if (e.Args.Contains(InstallLayout.FinishArgument))
+        {
+            SilentUpdate.Finish();
+            Shutdown();
+            return;
+        }
+
         if (e.Args.Contains(InstallLayout.UpdateArgument))
         {
             SilentUpdate.Run(SessionFrom(e.Args), e.Args.Contains(InstallLayout.WindowOption));

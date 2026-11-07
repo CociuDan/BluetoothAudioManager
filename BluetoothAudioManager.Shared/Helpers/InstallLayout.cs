@@ -58,6 +58,30 @@ public static class InstallLayout
     /// <summary>Runs the installer without pages, to update the installed app, as the updater does.</summary>
     public const string UpdateArgument = "--update";
 
+    /// <summary>
+    /// Runs the downloaded installer in the background to unpack the new app into the hidden .update folder, as the
+    /// updater does after each download, so updating only has to swap folders.
+    /// </summary>
+    public const string PrepareArgument = "--prepare";
+
+    /// <summary>
+    /// Runs the installer after the updater swapped in the prepared app and opened it: it replaces the updater, records
+    /// the new version and starts the updater again, all while the app is already open.
+    /// </summary>
+    public const string FinishArgument = "--finish";
+
+    /// <summary>Opens the app after an update, which skips asking the updater about updates as it starts.</summary>
+    public const string UpdatedArgument = "--updated";
+
+    /// <summary>The folder in .update where the next version's app is unpacked ahead of time.</summary>
+    public const string StagedFolderName = "staged";
+
+    /// <summary>The file in the staged folder, written last, naming the version unpacked there.</summary>
+    public const string StagedVersionFileName = "version.txt";
+
+    /// <summary>The name the replaced app folder has for a moment during an update, also left if one was interrupted.</summary>
+    public const string OldFolderSuffix = ".old";
+
     /// <summary>Followed by a Windows session number: the session to open the app in after updating.</summary>
     public const string SessionOption = "--session";
 
@@ -93,6 +117,26 @@ public static class InstallLayout
     public static string UpdaterFolder(string installFolder) => Path.Combine(installFolder, UpdaterFolderName);
 
     public static string UpdateFolder(string installFolder) => Path.Combine(installFolder, UpdateFolderName);
+
+    public static string StagedFolder(string installFolder) => Path.Combine(UpdateFolder(installFolder), StagedFolderName);
+
+    public static string StagedAppFolder(string installFolder) => Path.Combine(StagedFolder(installFolder), AppFolderName);
+
+    /// <summary>The version unpacked and ready to swap in, or null if none is complete.</summary>
+    public static string? StagedVersion(string installFolder)
+    {
+        try
+        {
+            var versionFile = Path.Combine(StagedFolder(installFolder), StagedVersionFileName);
+            return File.Exists(versionFile) && Directory.Exists(StagedAppFolder(installFolder))
+                ? File.ReadAllText(versionFile).Trim()
+                : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
 
     /// <summary>The version that last failed to install, or null if none has.</summary>
     public static string? FailedVersion => ReadValue(FailedVersionValue);

@@ -11,15 +11,22 @@ namespace BluetoothAudioManager.Updater.Workers;
 
 /// <summary>
 /// The service's work: checks GitHub on a schedule and when the app asks, keeps the latest version's installer
-/// downloaded and checked in the install folder's hidden .update folder, and runs it to update when the installed app asks.
+/// downloaded and checked in the install folder's hidden .update folder with its app unpacked beside it, and swaps
+/// that in to update when the installed app asks.
 /// </summary>
 public sealed class UpdateWorker : BackgroundService
 {
+    private const int MoveAttempts = 20;
+
+    private static readonly TimeSpan AppCloseCheckEvery = TimeSpan.FromMilliseconds(100);
+    private static readonly TimeSpan MoveRetryEvery = TimeSpan.FromMilliseconds(250);
+
     private readonly GitHubReleases _github = new();
     private readonly SemaphoreSlim _checkGate = new(1, 1);
     private UpdateStatus _status = new(UpdateState.None);
     private ReleaseSetup? _ready;
     private int _installing;
+    private int _preparing;
 
     protected override async Task ExecuteAsync(CancellationToken stop)
     {
@@ -165,6 +172,7 @@ public sealed class UpdateWorker : BackgroundService
 
             _ready = latest;
             _status = new UpdateStatus(UpdateState.Ready, latest.Version, notes);
+            StartPreparing(latest, path, stop);
             return _status;
         }
         catch (OperationCanceledException) when (stop.IsCancellationRequested)
@@ -185,9 +193,47 @@ public sealed class UpdateWorker : BackgroundService
     }
 
     /// <summary>
-    /// Runs the downloaded installer to update, if a version is ready and the installed app is the one asking.
-    /// The installer waits for the app to close, stops this service, swaps in the new version, then starts the service
-    /// again and opens the app for the person who asked.
+    /// Has the downloaded installer unpack the new app into the .update folder in the background, so updating later
+    /// only swaps folders. Until that's done, or if it fails, updating takes the longer way.
+    /// </summary>
+    private void StartPreparing(ReleaseSetup setup, string path, CancellationToken stop)
+    {
+        if (InstallLayout.InstallFolder is not { } installFolder
+            || InstallLayout.StagedVersion(installFolder) == setup.Version
+            || Interlocked.Exchange(ref _preparing, 1) == 1)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                // Checked again just before it runs with administrator rights.
+                if (await GitHubReleases.MatchesAsync(path, setup.Sha256, stop))
+                {
+                    using var process = Process.Start(SetupStart(path, InstallLayout.PrepareArgument));
+                    if (process is not null)
+                    {
+                        await process.WaitForExitAsync(stop);
+                    }
+                }
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                UpdaterLog.Write($"Couldn't unpack version {setup.Version} ahead of time: {exception.Message}");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _preparing, 0);
+            }
+        }, stop);
+    }
+
+    /// <summary>
+    /// Updates, if a version is ready and the installed app is the one asking. With the new app already unpacked, this
+    /// service waits for the app to close, swaps the app's folder for it, opens the app for the person who asked, and
+    /// leaves the installer to replace the updater in the background. Otherwise the installer does it all.
     /// </summary>
     private async Task<bool> StartInstallAsync(PipeClient client, bool showWindow, CancellationToken stop)
     {
@@ -200,6 +246,7 @@ public sealed class UpdateWorker : BackgroundService
             return false;
         }
 
+        var handedOver = false;
         try
         {
             // Checked again just before it runs with administrator rights.
@@ -211,17 +258,17 @@ public sealed class UpdateWorker : BackgroundService
                 return false;
             }
 
-            var start = new ProcessStartInfo(path) { UseShellExecute = false, CreateNoWindow = true };
-            start.ArgumentList.Add(InstallLayout.UpdateArgument);
-            start.ArgumentList.Add(InstallLayout.SessionOption);
-            start.ArgumentList.Add(client.SessionId.ToString());
-            if (showWindow)
+            UpdaterLog.Write($"Installing version {ready.Version}, asked from session {client.SessionId}.");
+
+            if (Volatile.Read(ref _preparing) == 0 && InstallLayout.StagedVersion(installFolder) == ready.Version)
             {
-                start.ArgumentList.Add(InstallLayout.WindowOption);
+                // Answered first, so the app closes, which the swap waits for.
+                _ = Task.Run(() => SwapInPreparedApp(path, installFolder, client.SessionId, showWindow, ready.Version));
+                handedOver = true;
+                return true;
             }
 
-            Process.Start(start)?.Dispose();
-            UpdaterLog.Write($"Installing version {ready.Version}, asked from session {client.SessionId}.");
+            StartFullUpdate(path, client.SessionId, showWindow);
             return true;
         }
         catch (Exception exception)
@@ -231,7 +278,142 @@ public sealed class UpdateWorker : BackgroundService
         }
         finally
         {
+            if (!handedOver)
+            {
+                Interlocked.Exchange(ref _installing, 0);
+            }
+        }
+    }
+
+    private void SwapInPreparedApp(string setupPath, string installFolder, uint sessionId, bool showWindow, string version)
+    {
+        try
+        {
+            WaitForAppToClose();
+
+            var appFolder = InstallLayout.AppFolder(installFolder);
+            var oldFolder = appFolder + InstallLayout.OldFolderSuffix;
+            DeleteIfThere(oldFolder);
+            MoveFolder(appFolder, oldFolder);
+            try
+            {
+                MoveFolder(InstallLayout.StagedAppFolder(installFolder), appFolder);
+            }
+            catch (Exception)
+            {
+                MoveFolder(oldFolder, appFolder);
+                throw;
+            }
+
+            OpenApp(appFolder, sessionId, showWindow);
+            DeleteIfThere(oldFolder);
+
+            // The rest happens with the app already open: the installer stops this service, replaces it, records
+            // the new version and starts it again.
+            Process.Start(SetupStart(setupPath, InstallLayout.FinishArgument))?.Dispose();
+        }
+        catch (Exception exception)
+        {
+            UpdaterLog.Write($"Couldn't swap in version {version} quickly, so it updates the longer way: {exception.Message}");
+            try
+            {
+                StartFullUpdate(setupPath, sessionId, showWindow);
+            }
+            catch (Exception fallback)
+            {
+                UpdaterLog.Write($"Couldn't start installing version {version}: {fallback.Message}");
+            }
+        }
+        finally
+        {
             Interlocked.Exchange(ref _installing, 0);
+        }
+    }
+
+    // The installer does it all: waits for the app, stops this service, unpacks and swaps both folders, then opens the app.
+    private static void StartFullUpdate(string setupPath, uint sessionId, bool showWindow)
+    {
+        var start = SetupStart(setupPath, InstallLayout.UpdateArgument);
+        start.ArgumentList.Add(InstallLayout.SessionOption);
+        start.ArgumentList.Add(sessionId.ToString());
+        if (showWindow)
+        {
+            start.ArgumentList.Add(InstallLayout.WindowOption);
+        }
+
+        Process.Start(start)?.Dispose();
+    }
+
+    private static ProcessStartInfo SetupStart(string setupPath, string argument)
+    {
+        var start = new ProcessStartInfo(setupPath) { UseShellExecute = false, CreateNoWindow = true };
+        start.ArgumentList.Add(argument);
+        return start;
+    }
+
+    // The app that asked closes within moments. Copies open for other signed-in people are waited for.
+    private static void WaitForAppToClose()
+    {
+        var since = Stopwatch.StartNew();
+        var logged = false;
+        while (Process.GetProcessesByName(InstallLayout.AppProcessName) is { Length: > 0 } running)
+        {
+            Array.ForEach(running, process => process.Dispose());
+            if (!logged && since.Elapsed > TimeSpan.FromMinutes(1))
+            {
+                UpdaterLog.Write("Waiting for the app to close for everyone signed in.");
+                logged = true;
+            }
+
+            Thread.Sleep(AppCloseCheckEvery);
+        }
+    }
+
+    // Opened as the person who asked, in their session, not with this service's rights.
+    private static void OpenApp(string appFolder, uint sessionId, bool showWindow)
+    {
+        try
+        {
+            var arguments = showWindow ? InstallLayout.UpdatedArgument : $"{InstallLayout.TrayArgument} {InstallLayout.UpdatedArgument}";
+            UserSessionLauncher.Start(sessionId, Path.Combine(appFolder, InstallLayout.AppExeName), arguments);
+        }
+        catch (Exception exception)
+        {
+            // They may have signed out meanwhile. The app starts as usual next time.
+            UpdaterLog.Write($"Couldn't open the app again: {exception.Message}");
+        }
+    }
+
+    // Files can stay locked for a moment after a program closes, such as while antivirus looks at them.
+    private static void MoveFolder(string from, string to)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                Directory.Move(from, to);
+                return;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException && attempt < MoveAttempts)
+            {
+                Thread.Sleep(MoveRetryEvery);
+            }
+        }
+    }
+
+    private static void DeleteIfThere(string folder)
+    {
+        try
+        {
+            if (Directory.Exists(folder))
+            {
+                Directory.Delete(folder, recursive: true);
+            }
+        }
+        catch (Exception exception)
+        {
+            // Left for the next update, or the uninstaller, to clear.
+            UpdaterLog.Write($"Couldn't delete {folder}: {exception.Message}");
         }
     }
 

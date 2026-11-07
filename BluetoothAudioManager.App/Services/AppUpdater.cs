@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Windows.Threading;
 using BluetoothAudioManager.Shared.Enums;
 using BluetoothAudioManager.Shared.Helpers;
@@ -13,6 +14,9 @@ internal sealed class AppUpdater : IDisposable
 {
     private static readonly TimeSpan AskEvery = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan QuickTimeout = TimeSpan.FromSeconds(3);
+
+    // Holding up the window only briefly: an update the updater doesn't confirm in time is offered a minute later.
+    private static readonly TimeSpan StartupTimeout = TimeSpan.FromSeconds(1);
 
     // A check downloads any new version before answering, which can take a while.
     private static readonly TimeSpan CheckTimeout = TimeSpan.FromMinutes(10);
@@ -33,11 +37,15 @@ internal sealed class AppUpdater : IDisposable
     /// <summary>Whether this is the installed app, which the updater keeps up to date.</summary>
     public bool IsInstalled { get; } = InstallLayout.IsInstalledApp();
 
-    /// <summary>The installed version, such as 0.0.3, or null for a build that wasn't installed.</summary>
-    public string? CurrentVersion => IsInstalled ? InstallLayout.InstalledVersion : null;
+    /// <summary>
+    /// The installed version, such as 0.0.3, or null for a build that wasn't installed. Read from the app itself,
+    /// as just after an update the registry gets the new version a moment after the app opens.
+    /// </summary>
+    public string? CurrentVersion =>
+        IsInstalled ? Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? InstallLayout.InstalledVersion : null;
 
     /// <summary>
-    /// Asks straight away whether an update is ready, waiting only briefly. Used as the app starts,
+    /// Asks straight away whether an update is ready, waiting only a moment. Used as the app starts,
     /// so an update chosen for later installs before the window opens.
     /// </summary>
     public string? ReadyVersionNow()
@@ -47,7 +55,8 @@ internal sealed class AppUpdater : IDisposable
             return null;
         }
 
-        var status = Task.Run(StatusAsync).GetAwaiter().GetResult();
+        var status = Task.Run(async () =>
+            UpdaterPipe.Parse(await UpdaterPipe.SendAsync(UpdaterPipe.StatusCommand, StartupTimeout))).GetAwaiter().GetResult();
         if (status.State == UpdateState.Ready)
         {
             _readyStatus = status;
