@@ -24,7 +24,8 @@ public static class UpdaterLog
                     file.Delete();
                 }
 
-                File.AppendAllText(FilePath, $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss} {message}{Environment.NewLine}");
+                // To the millisecond, so how long each step of an update takes can be read from it.
+                File.AppendAllText(FilePath, $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff} {message}{Environment.NewLine}");
             }
         }
         catch (Exception)

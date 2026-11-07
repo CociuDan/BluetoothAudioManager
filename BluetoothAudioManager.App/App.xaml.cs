@@ -45,6 +45,7 @@ public partial class App : Application
         }
 
         var showWindow = !fromWindowsStartup && !e.Args.Contains(StartupRegistration.TrayArgument);
+        StartupLog.Mark(e.Args.Contains(InstallLayout.UpdatedArgument) ? "Started after an update" : "Started");
         _updater = new AppUpdater();
 
         // An update chosen for later installs now, before the window opens. The updater opens the app again afterwards.
@@ -57,7 +58,10 @@ public partial class App : Application
             return;
         }
 
+        StartupLog.Mark("Asked the updater");
         _window = new MainWindow();
+        StartupLog.Mark("Window made");
+        _window.ContentRendered += (_, _) => StartupLog.Mark("Window shown");
         _window.UseUpdater(_updater);
         _trayIcon = new TrayIcon(_window.Toggle, ExitApp, InstallUpdate, CheckForUpdates, _updater.CurrentVersion);
         _updateNotification = new UpdateNotification(InstallUpdate, _window.ShowInCorner);
@@ -65,6 +69,7 @@ public partial class App : Application
         _window.UpdateClicked += InstallUpdate;
         _updater.UpdateReady += OnUpdateReady;
         _window.StartMonitoring();
+        StartupLog.Mark("Devices watched");
         _showRequestWait = ThreadPool.RegisterWaitForSingleObject(
             _showRequest,
             (_, _) => Dispatcher.BeginInvoke(() => _window.ShowInCorner()),
@@ -78,6 +83,7 @@ public partial class App : Application
         }
 
         _updater.Start();
+        StartupLog.Mark("Ready in the tray");
     }
 
     protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
@@ -156,8 +162,10 @@ public partial class App : Application
         _updateWait = null;
         _installing = true;
 
+        StartupLog.Write("Update now chosen.");
         if (await _updater.InstallAsync(_window.IsVisible))
         {
+            StartupLog.Write("The updater took the update, so the app closes.");
             ExitApp();
             return;
         }

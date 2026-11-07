@@ -287,9 +287,11 @@ public sealed class UpdateWorker : BackgroundService
 
     private void SwapInPreparedApp(string setupPath, string installFolder, uint sessionId, bool showWindow, string version)
     {
+        var timer = Stopwatch.StartNew();
         try
         {
             WaitForAppToClose();
+            UpdaterLog.Write($"The app closed, {timer.ElapsedMilliseconds} ms after Update now.");
 
             var appFolder = InstallLayout.AppFolder(installFolder);
             var oldFolder = appFolder + InstallLayout.OldFolderSuffix;
@@ -305,7 +307,9 @@ public sealed class UpdateWorker : BackgroundService
                 throw;
             }
 
+            UpdaterLog.Write($"Swapped in version {version}, {timer.ElapsedMilliseconds} ms after Update now.");
             OpenApp(appFolder, sessionId, showWindow);
+            UpdaterLog.Write($"Opened the app, {timer.ElapsedMilliseconds} ms after Update now.");
             DeleteIfThere(oldFolder);
 
             // The rest happens with the app already open: the installer stops this service, replaces it, records

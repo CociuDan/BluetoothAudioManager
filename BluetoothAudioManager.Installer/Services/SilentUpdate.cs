@@ -63,10 +63,14 @@ internal static class SilentUpdate
             return;
         }
 
+        // From when this installer started, which the updater logged as Installing.
+        var timer = Stopwatch.StartNew();
         try
         {
             WaitForAppToClose();
+            UpdaterLog.Write($"The app closed, {timer.ElapsedMilliseconds} ms into the update.");
             UpdaterService.Stop();
+            UpdaterLog.Write($"Stopped the updater, {timer.ElapsedMilliseconds} ms into the update.");
 
             using (var package = AppInstaller.OpenPackage())
             using (var archive = new ZipArchive(package, ZipArchiveMode.Read))
@@ -78,7 +82,7 @@ internal static class SilentUpdate
             // This installer, copied in, is the uninstaller from now on.
             File.Copy(Environment.ProcessPath!, Path.Combine(installFolder, InstallLayout.UninstallerName), overwrite: true);
             AppInstaller.Register(installFolder);
-            UpdaterLog.Write($"Updated to version {AppInstaller.Version}.");
+            UpdaterLog.Write($"Updated to version {AppInstaller.Version}, {timer.ElapsedMilliseconds} ms into the update.");
         }
         catch (Exception exception)
         {
@@ -91,6 +95,7 @@ internal static class SilentUpdate
             if (sessionId is { } session)
             {
                 OpenApp(installFolder, session, showWindow);
+                UpdaterLog.Write($"Opened the app, {timer.ElapsedMilliseconds} ms into the update.");
             }
 
             StartService();
