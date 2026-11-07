@@ -59,6 +59,7 @@ public partial class MainWindow : Window
     private DateTimeOffset _lastHiddenByClickAway;
     private bool _closeAllowed;
     private string? _airPodsName;
+    private string? _readyUpdateVersion;
     private AirPodsFamily? _airPodsFamily;
     private UIElement? _draggedRow;
     private List<UIElement> _dragRows = [];
@@ -186,6 +187,11 @@ public partial class MainWindow : Window
 
     public void ShowInCorner()
     {
+        if (_readyUpdateVersion is not null)
+        {
+            UpdateBar.Visibility = Visibility.Visible;
+        }
+
         ArrangeRows();
         SizeToDevices();
         PositionInCorner();
@@ -208,6 +214,7 @@ public partial class MainWindow : Window
     /// <summary>Shows the bar offering to install a downloaded update.</summary>
     public void ShowUpdateReady(string version)
     {
+        _readyUpdateVersion = version;
         UpdateText.Text = $"Version {version} is ready";
         UpdateBar.Visibility = Visibility.Visible;
 
