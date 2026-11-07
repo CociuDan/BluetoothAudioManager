@@ -57,6 +57,36 @@
                     </Trigger>
                 </Style.Triggers>
             </Style>
+            <Style x:Key="UpdateBarIconButton" TargetType="Button">
+                <Setter Property="Width" Value="30" />
+                <Setter Property="Height" Value="30" />
+                <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="4">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#33808080" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            <Style x:Key="DismissUpdateButton" TargetType="Button" BasedOn="{StaticResource UpdateBarIconButton}">
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#E81123" />
+                        <Setter Property="Foreground" Value="White" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
         </ResourceDictionary>
     </Window.Resources>
     <Border x:Name="Surface" CornerRadius="8" BorderThickness="1">
@@ -78,9 +108,6 @@
                     <TextBlock Text="Bluetooth Audio Manager" Margin="8,0,0,0" FontSize="12" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <Button x:Name="ReleaseNotesButton" Style="{StaticResource CaptionButton}" Content="&#xE946;" FontSize="13"
-                        Click="ReleaseNotesButton_Click" IsEnabled="False" ToolTip="Release notes"
-                        ToolTipService.ShowOnDisabled="True" AutomationProperties.Name="Release notes" />
                     <!-- The same size as the X, with the device rows' settings glyph. Highlighted while the settings are open. -->
                     <Button x:Name="SettingsButton" Style="{StaticResource CaptionButton}" Content="&#xE713;" FontSize="13"
                             Click="SettingsButton_Click" ToolTip="Settings" AutomationProperties.Name="Settings" />
@@ -104,18 +131,27 @@
                           Stroke="{DynamicResource AccentFillColorDefaultBrush}" StrokeThickness="1.5"
                           StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
                     <TextBlock x:Name="UpdateText" Grid.Column="1" Margin="10,0" FontSize="13" VerticalAlignment="Center" />
-                    <Button Grid.Column="2" Content="Update now" Height="30" Padding="14,0" FontSize="13"
-                            Click="UpdateButton_Click">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border CornerRadius="4" Background="{DynamicResource AccentFillColorDefaultBrush}">
-                                    <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center"
-                                                      VerticalAlignment="Center"
-                                                      TextElement.Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
-                                </Border>
-                            </ControlTemplate>
-                        </Button.Template>
-                    </Button>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Content="Update now" Height="30" Padding="14,0" FontSize="13"
+                                Click="UpdateButton_Click">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border CornerRadius="4" Background="{DynamicResource AccentFillColorDefaultBrush}">
+                                        <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"
+                                                          TextElement.Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                        <Button x:Name="ReleaseNotesButton" Style="{StaticResource UpdateBarIconButton}" Content="&#xE946;"
+                                Margin="4,0,0,0" Click="ReleaseNotesButton_Click" IsEnabled="False"
+                                ToolTip="Release notes" ToolTipService.ShowOnDisabled="True"
+                                AutomationProperties.Name="Release notes" />
+                        <Button Style="{StaticResource DismissUpdateButton}" Content="&#xE8BB;" Margin="2,0,0,0"
+                                Click="DismissUpdateButton_Click" ToolTip="Dismiss update"
+                                AutomationProperties.Name="Dismiss update" />
+                    </StackPanel>
                 </Grid>
             </Border>
 

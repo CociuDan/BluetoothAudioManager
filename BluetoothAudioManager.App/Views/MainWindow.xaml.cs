@@ -695,6 +695,15 @@ public partial class MainWindow : Window
 
     private void UpdateButton_Click(object sender, RoutedEventArgs e) => UpdateClicked?.Invoke();
 
+    private void DismissUpdateButton_Click(object sender, RoutedEventArgs e)
+    {
+        UpdateBar.Visibility = Visibility.Collapsed;
+        if (IsVisible)
+        {
+            SizeToDevices();
+        }
+    }
+
     private void SettingsButton_Click(object sender, RoutedEventArgs e) => ShowAppSettings(AppSettingsArea.Visibility != Visibility.Visible);
 
     private async void ReleaseNotesButton_Click(object sender, RoutedEventArgs e)
