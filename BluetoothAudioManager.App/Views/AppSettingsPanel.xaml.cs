@@ -58,7 +58,7 @@ public partial class AppSettingsPanel : UserControl
         _checking = true;
         CheckNowButton.IsEnabled = false;
         CheckNowButton.Content = "Checking…";
-        UpdatesText.Text = $"Version {Updater.CurrentVersion}. Checking GitHub for a new version…";
+        UpdatesText.Text = $"Version {Updater.CurrentVersion}. Checking for a new version…";
 
         var status = await Updater.CheckNowAsync();
         UpdatesText.Text = status switch
