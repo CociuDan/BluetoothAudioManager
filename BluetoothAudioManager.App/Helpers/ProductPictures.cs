@@ -9,7 +9,7 @@ namespace BluetoothAudioManager.App.Helpers;
 /// <summary>Pictures of the devices, from the app's Assets folder.</summary>
 internal static class ProductPictures
 {
-    public static ImageSource AirPodsMax => Load("Apple", "AirPodsMax.png");
+    public static ImageSource AirPodsMaxFor(ushort? appleProductId, bool lightTheme) => Load("Apple", DevicePictures.AirPodsMaxFileFor(appleProductId, lightTheme));
 
     /// <returns>The device's picture, or null if there's none for it or it's earbuds.</returns>
     public static ImageSource? ForDeviceName(string deviceName) =>

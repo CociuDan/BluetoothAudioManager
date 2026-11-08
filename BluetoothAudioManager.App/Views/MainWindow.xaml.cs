@@ -100,6 +100,8 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        // Before the window is built, so it never appears in the other theme.
+        WindowBackdrop.IsLight = _settings.UseLightTheme;
         InitializeComponent();
         WindowBackdrop.Transparency = _settings.Transparency;
         WindowBackdrop.Follow(this, Surface);
@@ -117,6 +119,7 @@ public partial class MainWindow : Window
         };
 
         AirPodsHeader.SettingsClicked += ToggleSettings;
+        AppSettingsView.ThemeChanged += () => _otherRows.ForEach(row => row.ShowCurrentPicture());
         AppSettingsView.UpdateClicked += () => UpdateClicked?.Invoke();
         AppSettingsView.UpdateFoundByCheck += version => ShowUpdateReady(version, explicitlyChecked: true);
 
@@ -284,7 +287,7 @@ public partial class MainWindow : Window
                     ? new BatteryReading(headset.BatteryPercent, headset.IsCharging)
                     : null)
                 : async () => new BatteryReading(await DeviceBatteryReader.ReadPercentAsync(name), false);
-            var row = new HeadphoneRow(name, TitleFor(device), PictureFor(device), ProductPictures.EarbudsForDeviceName(device.Name), _settings, connection, readBattery);
+            var row = new HeadphoneRow(name, TitleFor(device), () => PictureFor(device), ProductPictures.EarbudsForDeviceName(device.Name), _settings, connection, readBattery);
             if (device.IsUsbAdapter)
             {
                 _usbAdapterRows.Add(row);
@@ -327,12 +330,12 @@ public partial class MainWindow : Window
         device.IsUsbAdapter ? _jabra.HeadsetNameFor(device.Name) ?? device.Name : device.Name;
 
     // The picture matching the device's name, or the generic headphones placeholder when there's none.
-    // Renamed AirPods Max are still recognized by their product ID.
+    // AirPods Max follow the theme, and renamed ones are still recognized by their product ID.
     private ImageSource PictureFor(PairedAudioDevice device)
     {
-        if (AppleProducts.FamilyOf(device.AppleProductId) == AirPodsFamily.AirPodsMax)
+        if (AppleProducts.FamilyOf(device.AppleProductId) == AirPodsFamily.AirPodsMax || PairedAudioDevices.IsAirPodsMax(device.Name))
         {
-            return ProductPictures.AirPodsMax;
+            return ProductPictures.AirPodsMaxFor(device.AppleProductId, WindowBackdrop.IsLight);
         }
 
         return ProductPictures.ForDeviceName(device.Name) ?? (ImageSource)FindResource("GenericHeadphonesImage");

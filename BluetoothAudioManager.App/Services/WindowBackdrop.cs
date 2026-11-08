@@ -3,12 +3,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
-using Microsoft.Win32;
 using BluetoothAudioManager.App.Interop;
 
 namespace BluetoothAudioManager.App.Services;
 
-/// <summary>Gives a borderless window a blurred, see-through background and rounded corners that follow the Windows app theme.</summary>
+/// <summary>Gives a borderless window a blurred, see-through background and rounded corners, in the app's dark or light theme.</summary>
 internal static class WindowBackdrop
 {
     private const double CornerRadius = 8;
@@ -18,7 +17,6 @@ internal static class WindowBackdrop
     // Windows passes clicks on completely invisible parts of a window through to what's behind it.
     private const byte LeastAlpha = 1;
     private const int WindowCompositionAccentPolicy = 19;
-    private const string PersonalizeKey = @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
 
     /// <summary>How see-through the window is by default, in percent, close to how it always looked in both themes.</summary>
     public const int DefaultTransparency = 25;
@@ -39,9 +37,26 @@ internal static class WindowBackdrop
 
     private static Border? _surface;
     private static int _transparency = DefaultTransparency;
+    private static bool _isLight;
 
-    /// <summary>Whether the window follows the light app theme, as last applied.</summary>
-    public static bool IsLight { get; private set; } = true;
+    /// <summary>Whether the app uses its light theme rather than its dark one. Applied straight away.</summary>
+    public static bool IsLight
+    {
+        get => _isLight;
+        set
+        {
+            _isLight = value;
+
+#pragma warning disable WPF0001 // Setting the theme from code is marked as a preview feature.
+            Application.Current.ThemeMode = value ? ThemeMode.Light : ThemeMode.Dark;
+#pragma warning restore WPF0001
+
+            if (_surface is not null)
+            {
+                ApplyTheme(_surface);
+            }
+        }
+    }
 
     /// <summary>The window's thin edge, for anything drawn to look like part of the window.</summary>
     public static Brush Edge => IsLight ? LightEdge : DarkEdge;
@@ -75,14 +90,6 @@ internal static class WindowBackdrop
     {
         _surface = surface;
 
-        UserPreferenceChangedEventHandler onChanged = (_, e) =>
-        {
-            if (e.Category == UserPreferenceCategory.General)
-            {
-                window.Dispatcher.BeginInvoke(() => ApplyTheme(surface));
-            }
-        };
-
         window.SourceInitialized += (_, _) =>
         {
             EnableBlur(new WindowInteropHelper(window).Handle);
@@ -91,17 +98,12 @@ internal static class WindowBackdrop
         };
         window.SizeChanged += (_, _) => RoundCorners(window);
         window.DpiChanged += (_, _) => RoundCorners(window);
-        SystemEvents.UserPreferenceChanged += onChanged;
-        window.Closed += (_, _) => SystemEvents.UserPreferenceChanged -= onChanged;
     }
 
     // How solid the window's color is, from 0 to 1.
     private static double SolidShare => (100 - _transparency) / 100.0;
     private static void ApplyTheme(Border surface)
     {
-        // The value is missing on Windows versions without a theme setting, which are light.
-        IsLight = (Registry.GetValue(PersonalizeKey, "AppsUseLightTheme", 1) as int? ?? 1) != 0;
-
         surface.Background = Surface(SolidShare);
         surface.BorderBrush = Edge;
     }

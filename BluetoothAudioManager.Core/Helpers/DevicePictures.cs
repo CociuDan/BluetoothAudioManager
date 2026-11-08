@@ -9,12 +9,16 @@ namespace BluetoothAudioManager.Core.Helpers;
 public static class DevicePictures
 {
     private const string LowEnergyPrefix = "LE_";
+    private const string AirPodsMaxSpaceGray = "AirPodsMaxSpaceGray.png";
+    private const string AirPodsMaxMidnight = "AirPodsMaxMidnight.png";
+    private const string AirPodsMaxSilver = "AirPodsMaxSilver.png";
+    private const string AirPodsMaxStarlight = "AirPodsMaxStarlight.png";
 
     // A device matches when its name contains the name part as whole words, ignoring capitals and dots,
     // so "MID" matches "MID" but not "MID ANC", and "MONITOR II" doesn't match "MONITOR III".
     private static readonly (string NamePart, DevicePicture Picture)[] ByName =
     [
-        ("AirPods Max", DevicePicture.Headphones("Apple", "AirPodsMax.png")),
+        ("AirPods Max", DevicePicture.Headphones("Apple", AirPodsMaxMidnight)),
 
         // Marshall headphones, by the names Windows shows for them.
         ("MAJOR II", DevicePicture.Headphones("Marshall", "MajorII.png")),
@@ -118,6 +122,15 @@ public static class DevicePictures
 
     /// <returns>The single picture's file name, or null for earbuds and devices without a picture.</returns>
     public static string? FileFor(string deviceName) => For(deviceName)?.FileName;
+
+    /// <summary>
+    /// Dark headphones on the dark theme and light ones on the light theme: Space Gray or Silver for
+    /// the Lightning model, and Midnight or Starlight for every later one.
+    /// </summary>
+    public static string AirPodsMaxFileFor(ushort? appleProductId, bool lightTheme) =>
+        appleProductId == AppleProducts.AirPodsMaxLightning
+            ? lightTheme ? AirPodsMaxSilver : AirPodsMaxSpaceGray
+            : lightTheme ? AirPodsMaxStarlight : AirPodsMaxMidnight;
 
     // Capitals and dots don't matter, brackets separate words like spaces, and runs of spaces count as one.
     // Some headphones also appear a second time for Bluetooth LE with "LE_" before their name, such as

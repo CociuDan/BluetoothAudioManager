@@ -15,6 +15,19 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
+            <TextBlock Text="Theme" FontSize="14" />
+            <TextBlock x:Name="ThemeText" Grid.Column="1" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" />
+            <ToggleButton x:Name="ThemeToggle" Grid.Column="2" Style="{StaticResource SwitchStyle}"
+                          VerticalAlignment="Center" Click="ThemeToggle_Click"
+                          AutomationProperties.Name="Light theme" />
+        </Grid>
+
+        <Grid Margin="0,20,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
             <TextBlock Text="Start with the System" FontSize="14" />
             <TextBlock x:Name="StartupText" Grid.Column="1" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" />
             <ToggleButton x:Name="StartupToggle" Grid.Column="2" Style="{StaticResource SwitchStyle}"

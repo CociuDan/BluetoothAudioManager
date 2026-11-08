@@ -33,6 +33,9 @@ public sealed class AppSettings
     /// <summary>How see-through the window is, in percent: 0 is solid, and 100 is the most allowed, so it's never fully see-through.</summary>
     public int Transparency { get; set; } = WindowBackdrop.DefaultTransparency;
 
+    /// <summary>Whether the app uses its light theme. Dark is the default.</summary>
+    public bool UseLightTheme { get; set; }
+
     /// <summary>
     /// The partner key Jabra gives registered developers, which its kit needs to read Jabra headsets' battery levels.
     /// It's added to the settings file by hand, so it never ends up in the code.

@@ -9,7 +9,7 @@ using BluetoothAudioManager.Shared.Models;
 namespace BluetoothAudioManager.App.Views;
 
 /// <summary>
-/// The app's settings: starting with Windows, updates, and how see-through the window is. Changes apply straight away and are saved.
+/// The app's settings: the theme, starting with the system, updates, and how see-through the window is. Changes apply straight away and are saved.
 /// </summary>
 public partial class AppSettingsPanel : UserControl
 {
@@ -30,6 +30,9 @@ public partial class AppSettingsPanel : UserControl
     /// <summary>The updater to ask about checking automatically, set by the app. Without one, that setting isn't shown.</summary>
     internal AppUpdater? Updater { get; set; }
 
+    /// <summary>Raised after the theme changes, for anything that has to be swapped by hand, such as pictures.</summary>
+    public event Action? ThemeChanged;
+
     /// <summary>Raised when the ready update is chosen for installation.</summary>
     public event Action? UpdateClicked;
 
@@ -41,6 +44,7 @@ public partial class AppSettingsPanel : UserControl
     {
         _settings = settings;
         _showing = true;
+        ThemeToggle.IsChecked = settings.UseLightTheme;
         StartupToggle.IsChecked = StartupRegistration.IsEnabled;
         TransparencySlider.Value = WindowBackdrop.ClampTransparency(settings.Transparency);
         _showing = false;
@@ -170,6 +174,20 @@ public partial class AppSettingsPanel : UserControl
         AutomaticUpdatesToggle.IsEnabled = true;
     }
 
+    private void ThemeToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null)
+        {
+            return;
+        }
+
+        _settings.UseLightTheme = ThemeToggle.IsChecked == true;
+        _settings.Save();
+        WindowBackdrop.IsLight = _settings.UseLightTheme;
+        UpdateText();
+        ThemeChanged?.Invoke();
+    }
+
     private async void StartupToggle_Click(object sender, RoutedEventArgs e)
     {
         StartupToggle.IsEnabled = false;
@@ -203,6 +221,7 @@ public partial class AppSettingsPanel : UserControl
 
     private void UpdateText()
     {
+        ThemeText.Text = ThemeToggle.IsChecked == true ? "Light" : "Dark";
         StartupText.Text = StartupToggle.IsChecked == true ? "On" : "Off";
         AutomaticUpdatesText.Text = AutomaticUpdatesToggle.IsChecked == true ? "On" : "Off";
         TransparencyText.Text = TransparencySlider.Value == 0 ? "Solid" : $"{TransparencySlider.Value:0}%";

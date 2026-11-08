@@ -10,6 +10,9 @@ namespace BluetoothAudioManager.Core.Helpers;
 /// </summary>
 public static partial class AppleProducts
 {
+    /// <summary>The Lightning AirPods Max from 2020. The USB-C model from 2024 is 0x201F.</summary>
+    public const ushort AirPodsMaxLightning = 0x200A;
+
     /// <summary>The model's family, or Unknown for a model not listed here yet, such as AirPods 5 or AirPods Pro 3.</summary>
     public static AirPodsFamily FamilyOf(ushort? productId) => productId switch
     {
@@ -17,7 +20,7 @@ public static partial class AppleProducts
         0x2013 => AirPodsFamily.AirPods3,
         0x2019 or 0x201B => AirPodsFamily.AirPods4,
         0x200E or 0x2014 or 0x2024 => AirPodsFamily.AirPodsPro,
-        0x200A or 0x201F => AirPodsFamily.AirPodsMax,
+        AirPodsMaxLightning or 0x201F => AirPodsFamily.AirPodsMax,
         _ => AirPodsFamily.Unknown,
     };
 

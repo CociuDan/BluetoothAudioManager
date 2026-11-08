@@ -22,18 +22,19 @@ public partial class HeadphoneRow : UserControl, IDisposable
     private readonly LowBatteryWatcher _lowBatteryWatcher = new();
     private readonly DispatcherTimer _batteryTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private readonly Func<Task<BatteryReading?>> _readBattery;
+    private readonly Func<ImageSource> _picture;
     private readonly bool _isEarbuds;
     private string _title;
     private bool _reportsBattery;
 
-    /// <param name="picture">The headphones picture, shown unless earbud pictures are given.</param>
+    /// <param name="picture">Gets the headphones picture for the current theme, shown unless earbud pictures are given.</param>
     /// <param name="earbuds">For earbuds, their buds and case, shown like the AirPods instead of a single picture.</param>
     /// <param name="connection">Follows the device. The row disposes of it.</param>
     /// <param name="readBattery">Reads the device's battery level and whether it's charging. A null reading or level means it doesn't report one.</param>
     public HeadphoneRow(
         string deviceName,
         string title,
-        ImageSource picture,
+        Func<ImageSource> picture,
         EarbudPictures? earbuds,
         AppSettings settings,
         IAudioDeviceConnection connection,
@@ -46,9 +47,10 @@ public partial class HeadphoneRow : UserControl, IDisposable
         _settings = settings;
         _connection = connection;
         _readBattery = readBattery;
+        _picture = picture;
         _isEarbuds = earbuds is not null;
         Header.Title = title;
-        Picture.Source = picture;
+        ShowCurrentPicture();
         if (earbuds is not null)
         {
             LeftBudPicture.Source = earbuds.Left;
@@ -114,6 +116,9 @@ public partial class HeadphoneRow : UserControl, IDisposable
     private BatteryBadge LevelBadge => _isEarbuds ? EarbudsBadge : Badge;
 
     public void RefreshOutputState() => Header.RefreshOutputState();
+
+    /// <summary>Shows the picture for the current theme, as AirPods Max have one for each.</summary>
+    public void ShowCurrentPicture() => Picture.Source = _picture();
 
     /// <summary>Checks the connection now, rather than waiting for the next regular check.</summary>
     public void RefreshConnection() => Header.CheckNow();

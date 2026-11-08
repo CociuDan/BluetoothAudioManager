@@ -17,13 +17,25 @@ public class DevicePicturesTests
     [Theory]
     [InlineData("MAJOR IV", "MajorIV.png")]
     [InlineData("Marshall Major IV", "MajorIV.png")]
-    [InlineData("AirPods Max", "AirPodsMax.png")]
-    [InlineData("Dan's AirPods Max", "AirPodsMax.png")]
+    [InlineData("AirPods Max", "AirPodsMaxMidnight.png")]
+    [InlineData("Dan's AirPods Max", "AirPodsMaxMidnight.png")]
     [InlineData("Jabra Evolve 65", "JabraEvolve65.png")]
     [InlineData("Jabra Link 370", "JabraEvolve65.png")]
     public void FileFor_FindsThePictureByName(string deviceName, string expected)
     {
         Assert.Equal(expected, DevicePictures.FileFor(deviceName));
+    }
+
+    [Theory]
+    [InlineData((ushort)0x200A, false, "AirPodsMaxSpaceGray.png")]
+    [InlineData((ushort)0x200A, true, "AirPodsMaxSilver.png")]
+    [InlineData((ushort)0x201F, false, "AirPodsMaxMidnight.png")]
+    [InlineData((ushort)0x201F, true, "AirPodsMaxStarlight.png")]
+    [InlineData(null, false, "AirPodsMaxMidnight.png")]
+    [InlineData(null, true, "AirPodsMaxStarlight.png")]
+    public void AirPodsMaxFileFor_ChoosesTheColorByVersionAndTheme(ushort? productId, bool lightTheme, string expected)
+    {
+        Assert.Equal(expected, DevicePictures.AirPodsMaxFileFor(productId, lightTheme));
     }
 
     [Theory]
