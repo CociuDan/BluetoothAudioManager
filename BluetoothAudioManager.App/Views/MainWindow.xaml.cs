@@ -765,7 +765,7 @@ public partial class MainWindow : Window
         DevicesScroller.ScrollToTop();
     }
 
-    // The app's settings take the devices' place, and the gear stays highlighted while they're open.
+    // The app's settings take the devices' place, and the gear is filled with the accent color while they're open.
     private void ShowAppSettings(bool open)
     {
         ReleaseNotesArea.Visibility = Visibility.Collapsed;
@@ -773,11 +773,13 @@ public partial class MainWindow : Window
         {
             AppSettingsView.Show(_settings);
             AppSettingsArea.ScrollToTop();
-            SettingsButton.SetResourceReference(BackgroundProperty, "SubtleFillColorSecondaryBrush");
+            SettingsButton.SetResourceReference(BackgroundProperty, "AccentFillColorDefaultBrush");
+            SettingsButton.SetResourceReference(ForegroundProperty, "TextOnAccentFillColorPrimaryBrush");
         }
         else
         {
             SettingsButton.ClearValue(BackgroundProperty);
+            SettingsButton.ClearValue(ForegroundProperty);
         }
 
         AppSettingsArea.Visibility = open ? Visibility.Visible : Visibility.Collapsed;

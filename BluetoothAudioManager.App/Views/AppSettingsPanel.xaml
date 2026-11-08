@@ -56,7 +56,7 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock Text="Updates" FontSize="14" VerticalAlignment="Center" />
-            <Button x:Name="CheckNowButton" Grid.Column="1" Content="Check now" Height="30" MinWidth="96" Padding="14,0"
+            <Button x:Name="CheckNowButton" Grid.Column="1" Style="{StaticResource FlatButtonStyle}" Content="Check now" Height="30" MinWidth="96" Padding="14,0"
                     Margin="12,0,0,0" FontSize="13" VerticalAlignment="Center" Click="CheckNowButton_Click" />
         </Grid>
 

@@ -108,7 +108,7 @@
                     <TextBlock Text="Bluetooth Audio Manager" Margin="8,0,0,0" FontSize="12" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <!-- The same size as the X, with the device rows' settings glyph. Highlighted while the settings are open. -->
+                    <!-- The same size as the X, with the device rows' settings glyph. Filled with the accent color while the settings are open. -->
                     <Button x:Name="SettingsButton" Style="{StaticResource CaptionButton}" Content="&#xE713;" FontSize="13"
                             Click="SettingsButton_Click" ToolTip="Settings" AutomationProperties.Name="Settings" />
                     <Button Style="{StaticResource CloseCaptionButton}" Content="&#xE8BB;"
@@ -168,7 +168,7 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="What's new" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
-                        <Button Grid.Column="1" Content="Back" Height="30" MinWidth="64" Padding="12,0"
+                        <Button Grid.Column="1" Style="{StaticResource FlatButtonStyle}" Content="Back" Height="30" MinWidth="64" Padding="12,0"
                                 Click="ReleaseNotesBackButton_Click" />
                     </Grid>
                     <TextBlock x:Name="ReleaseNotesVersion" FontSize="12" Margin="0,8,0,12"
