@@ -20,6 +20,8 @@ public class DevicePicturesTests
     [InlineData("AirPods Max", "AirPodsMaxMidnight.png")]
     [InlineData("Dan's AirPods Max", "AirPodsMaxMidnight.png")]
     [InlineData("Jabra Evolve 65", "JabraEvolve65.png")]
+    [InlineData("Jabra Evolve 65 Mono", "JabraEvolve65Mono.png")]
+    [InlineData("Jabra Evolve2 65 Flex", "JabraEvolve2_65Flex.png")]
     [InlineData("Jabra Link 370", "JabraEvolve65.png")]
     public void FileFor_FindsThePictureByName(string deviceName, string expected)
     {

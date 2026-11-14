@@ -101,7 +101,10 @@ public static class DevicePictures
         ("LinkBuds Clip", DevicePicture.Earbuds("Sony", "LinkBudsClip")),
         ("INZONE Buds", DevicePicture.Earbuds("Sony", "InzoneBuds")),
 
+        // Jabra headsets, by the names Windows or Jabra's kit shows. Evolve2 is one word, so it never matches the Evolve 65.
         ("Jabra Evolve 65", DevicePicture.Headphones("Jabra", "JabraEvolve65.png")),
+        ("Jabra Evolve 65 Mono", DevicePicture.Headphones("Jabra", "JabraEvolve65Mono.png")),
+        ("Jabra Evolve2 65 Flex", DevicePicture.Headphones("Jabra", "JabraEvolve2_65Flex.png")),
 
         // The adapter's name stands in for its headset until Jabra's kit names it, and it comes with the Evolve 65.
         ("Jabra Link 370", DevicePicture.Headphones("Jabra", "JabraEvolve65.png")),
