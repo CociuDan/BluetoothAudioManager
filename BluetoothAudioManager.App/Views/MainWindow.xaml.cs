@@ -160,6 +160,7 @@ public partial class MainWindow : Window
             _timer.Stop();
             _earDetectionTimer.Stop();
             AirPodsHeader.Stop();
+            AirPodsVolume.Dispose();
             _monitor.Dispose();
             _airPodsConnection.Dispose();
             _otherRows.ForEach(row => row.Dispose());
@@ -173,6 +174,7 @@ public partial class MainWindow : Window
     {
         StartScanning();
         AirPodsHeader.Follow(_airPodsConnection);
+        AirPodsVolume.Follow(new DeviceVolume(_airPodsConnection.Matches), PairedAudioDevices.AirPodsName);
         RefreshDevices();
         WatchOutput();
         StartJabra();
@@ -870,6 +872,7 @@ public partial class MainWindow : Window
             _outputWatcher.Changed += () => Dispatcher.BeginInvoke(() =>
             {
                 AirPodsHeader.RefreshOutputState();
+                AirPodsVolume.Refresh();
                 _otherRows.ForEach(row => row.RefreshOutputState());
             });
         }
@@ -920,6 +923,7 @@ public partial class MainWindow : Window
             _pausedApps = [];
         }
 
+        AirPodsVolume.Refresh();
         Refresh();
     }
 

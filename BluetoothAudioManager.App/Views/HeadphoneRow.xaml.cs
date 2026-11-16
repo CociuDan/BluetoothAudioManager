@@ -12,8 +12,8 @@ using BluetoothAudioManager.Core.Services;
 namespace BluetoothAudioManager.App.Views;
 
 /// <summary>
-/// An audio device other than AirPods with pods: its picture, or its buds and case for earbuds, and connection buttons.
-/// A battery badge and settings appear only if Windows reports a level for it.
+/// An audio device other than AirPods with pods: its picture, or its buds and case for earbuds, connection buttons, and
+/// its volume. A battery badge and settings appear only if Windows reports a level for it.
 /// </summary>
 public partial class HeadphoneRow : UserControl, IDisposable
 {
@@ -69,6 +69,7 @@ public partial class HeadphoneRow : UserControl, IDisposable
         _batteryTimer.Tick += (_, _) => RefreshBattery();
 
         Header.Follow(_connection);
+        VolumeControl.Follow(new DeviceVolume(_connection.Matches), title);
         _batteryTimer.Start();
     }
 
@@ -124,7 +125,12 @@ public partial class HeadphoneRow : UserControl, IDisposable
     // Earbuds show their level under the buds, and headphones under their picture.
     private BatteryBadge LevelBadge => _isEarbuds ? EarbudsBadge : Badge;
 
-    public void RefreshOutputState() => Header.RefreshOutputState();
+    /// <summary>Checks the output again, along with its volume, as Windows adds and removes outputs as devices connect.</summary>
+    public void RefreshOutputState()
+    {
+        Header.RefreshOutputState();
+        VolumeControl.Refresh();
+    }
 
     /// <summary>Shows the picture for the current theme, as AirPods Max have one for each.</summary>
     public void ShowCurrentPicture() => Picture.Source = _picture();
@@ -195,6 +201,7 @@ public partial class HeadphoneRow : UserControl, IDisposable
             ShowSettings(false);
         }
 
+        VolumeControl.Refresh();
         RefreshBattery();
     }
 
@@ -209,6 +216,7 @@ public partial class HeadphoneRow : UserControl, IDisposable
     {
         _batteryTimer.Stop();
         Header.Stop();
+        VolumeControl.Dispose();
         _connection.Dispose();
     }
 }

@@ -15,6 +15,9 @@ public interface IAudioDeviceConnection : IDisposable
     /// </summary>
     bool CanConnect { get; }
 
+    /// <summary>Whether a Windows name, of a device or a sound output, belongs to this device.</summary>
+    bool Matches(string name);
+
     /// <summary>Checks for the device again, so one added or removed while the app runs is noticed.</summary>
     Task FindDevicesAsync();
 

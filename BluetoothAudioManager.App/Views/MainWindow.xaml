@@ -200,6 +200,7 @@
                 <Border x:Name="AirPodsDivider" Height="1" Margin="22,12,0,12" Visibility="Hidden"
                         Background="{DynamicResource DividerStrokeColorDefaultBrush}" />
                 <local:DeviceHeader x:Name="AirPodsHeader" Title="AirPods" ShowSettings="True" />
+                <local:VolumeSlider x:Name="AirPodsVolume" Margin="22,0,0,12" />
                 <Grid x:Name="AirPodsParts" Height="130" Margin="22,0,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="88" />

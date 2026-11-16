@@ -114,7 +114,8 @@ public sealed class BluetoothAudioEndpoint
     public bool RequestDisconnect() => SendRequest(OneShotDisconnect);
 
     // A Bluetooth headset has a stereo output and a much lower quality Hands-Free one, so stereo comes first.
-    private static string? FindPreferredOutputId(IMMDeviceEnumerator enumerator, Func<string, bool> nameMatches)
+    // Also used for the volume, so it's the same output the app makes the system output.
+    internal static string? FindPreferredOutputId(IMMDeviceEnumerator enumerator, Func<string, bool> nameMatches)
     {
         enumerator.EnumAudioEndpoints(RenderFlow, ActiveOnly, out var devices);
         devices.GetCount(out var count);
