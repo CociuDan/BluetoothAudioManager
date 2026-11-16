@@ -843,16 +843,13 @@ public partial class MainWindow : Window
         _settings.Save();
     }
 
-    // Turned on, the window stays where it is now. Turned off, it goes back to the corner straight away.
+    // Either way the window stays where it is now. Turned on, that's saved. Turned off, the window opens in the corner
+    // again the next time it's shown.
     private void OnRememberPositionChanged(bool on)
     {
         if (on)
         {
             SavePosition();
-        }
-        else
-        {
-            PositionInCorner();
         }
     }
 
