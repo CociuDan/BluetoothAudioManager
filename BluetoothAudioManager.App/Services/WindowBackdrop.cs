@@ -12,6 +12,7 @@ internal static class WindowBackdrop
 {
     private const double CornerRadius = 8;
     private const int AccentEnableBlurBehind = 3;
+    private const int CombineOr = 2;
 
     // The least a color may be, out of 255, so a fully see-through window still catches clicks:
     // Windows passes clicks on completely invisible parts of a window through to what's behind it.
@@ -148,11 +149,40 @@ internal static class WindowBackdrop
             return;
         }
 
-        var diameter = (int)Math.Round(CornerRadius * 2 * VisualTreeHelper.GetDpi(window).DpiScaleX);
-        var region = CreateRoundRectRgn(0, 0, bounds.Right - bounds.Left + 1, bounds.Bottom - bounds.Top + 1, diameter, diameter);
+        var radius = CornerRadius * VisualTreeHelper.GetDpi(window).DpiScaleX;
+        var region = RoundedRegion(bounds.Right - bounds.Left, bounds.Bottom - bounds.Top, radius);
 
         // Windows owns the region after this call, so it isn't deleted here.
         SetWindowRgn(handle, region, true);
+    }
+
+    // Windows can only cut a window along whole pixels. Its own rounded cut doesn't follow the curve WPF draws, and
+    // reaches a pixel past it at the right and bottom corners, so the blur showed outside the window's edge there.
+    // This cut keeps exactly the pixels whose middle is inside the curve WPF draws, the same at all four corners.
+    private static IntPtr RoundedRegion(int width, int height, double radius)
+    {
+        var cornerRows = Math.Min((int)Math.Ceiling(radius), height / 2);
+        var region = CreateRectRgn(0, cornerRows, width, height - cornerRows);
+
+        for (var row = 0; row < cornerRows; row++)
+        {
+            // How far the curve is from the window's side, at the middle of this row.
+            var fromCorner = radius - (row + 0.5);
+            var curveInset = fromCorner > 0 ? radius - Math.Sqrt(radius * radius - fromCorner * fromCorner) : 0;
+            var inset = (int)Math.Ceiling(curveInset - 0.5);
+
+            AddRow(region, inset, row, width - inset);
+            AddRow(region, inset, height - 1 - row, width - inset);
+        }
+
+        return region;
+    }
+
+    private static void AddRow(IntPtr region, int left, int top, int right)
+    {
+        var row = CreateRectRgn(left, top, right, top + 1);
+        CombineRgn(region, region, row, CombineOr);
+        DeleteObject(row);
     }
 
     [DllImport("user32.dll")]
@@ -166,5 +196,12 @@ internal static class WindowBackdrop
     private static extern int SetWindowRgn(IntPtr window, IntPtr region, [MarshalAs(UnmanagedType.Bool)] bool redraw);
 
     [DllImport("gdi32.dll")]
-    private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int widthEllipse, int heightEllipse);
+    private static extern IntPtr CreateRectRgn(int left, int top, int right, int bottom);
+
+    [DllImport("gdi32.dll")]
+    private static extern int CombineRgn(IntPtr destination, IntPtr first, IntPtr second, int mode);
+
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeleteObject(IntPtr gdiObject);
 }

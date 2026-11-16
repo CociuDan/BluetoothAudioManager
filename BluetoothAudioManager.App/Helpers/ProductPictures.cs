@@ -24,11 +24,13 @@ internal static class ProductPictures
             : null;
 
     /// <summary>
-    /// The pods and case for a family. Families without their own pictures yet, such as AirPods 1 and 2,
-    /// and models not recognized yet, such as AirPods 5 and AirPods Pro 3, use the AirPods 4 pictures.
+    /// The pods and case for a family. Models not recognized yet, such as AirPods 5 and AirPods Pro 3,
+    /// use the AirPods 4 pictures.
     /// </summary>
     public static (ImageSource Right, ImageSource Left, ImageSource Case) ForAirPods(AirPodsFamily family) => family switch
     {
+        // Apple shows the left pod from the outside and the right one from the speaker side, so they're kept that way.
+        AirPodsFamily.AirPods1And2 => (Load("Apple", "AirPods1And2Pod-R.png"), Load("Apple", "AirPods1And2Pod-L.png"), Load("Apple", "AirPods1And2Case.png")),
         AirPodsFamily.AirPods3 => (Load("Apple", "AirPods3Pod-R.png"), Load("Apple", "AirPods3Pod-L.png"), Load("Apple", "AirPods3Case.png")),
         AirPodsFamily.AirPodsPro => (Load("Apple", "AirPodsProPod-R.png"), Load("Apple", "AirPodsProPod-L.png"), Load("Apple", "AirPodsProCase.png")),
         _ => (Load("Apple", "AirPods4Pod-R.png"), Load("Apple", "AirPods4Pod-L.png"), Load("Apple", "AirPods4Case.png")),
