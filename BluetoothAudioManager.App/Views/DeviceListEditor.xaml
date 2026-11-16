@@ -4,27 +4,12 @@
     <UserControl.Resources>
         <ResourceDictionary Source="/Resources/Styles.xaml" />
     </UserControl.Resources>
-    <!-- Every paired device, hidden ones too, to reorder and to choose which ones the app shows. The pencil next to the gear opens it. -->
+    <!--
+        Every paired device, hidden ones too, to reorder and to choose which ones the app shows.
+        The pencil next to the gear opens it and goes back to the devices, as the gear does for the settings.
+    -->
     <StackPanel>
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <TextBlock Text="Edit the list" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
-            <Button Grid.Column="1" Content="Done" Height="30" MinWidth="64" Padding="14,0" FontSize="13"
-                    Click="DoneButton_Click">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border CornerRadius="4" Background="{DynamicResource AccentFillColorDefaultBrush}">
-                            <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              TextElement.Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
-                        </Border>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
-        </Grid>
+        <TextBlock Text="Edit the list" FontSize="18" FontWeight="SemiBold" />
         <TextBlock Text="Drag to reorder. Hidden devices stay paired in Windows." FontSize="12" Margin="0,4,0,12"
                    TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
 

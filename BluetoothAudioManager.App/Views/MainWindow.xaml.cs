@@ -126,8 +126,6 @@ public partial class MainWindow : Window
         AppSettingsView.RememberPositionChanged += OnRememberPositionChanged;
         AppSettingsView.UpdateClicked += () => UpdateClicked?.Invoke();
         AppSettingsView.UpdateFoundByCheck += ShowUpdateReady;
-        DeviceListView.DoneClicked += () => ShowListEditor(false);
-
         // While a device is dragged, the area holding the devices has the mouse, so these follow it to the drop.
         AirPodsHeader.DragStarted += () => StartDrag(AirPodsSection);
         DevicesArea.MouseMove += (_, e) => MoveDrag(e.GetPosition(DevicesPanel));
@@ -417,7 +415,7 @@ public partial class MainWindow : Window
     private void EditListButton_Click(object sender, RoutedEventArgs e) => ShowListEditor(DeviceListArea.Visibility != Visibility.Visible);
 
     // The edit list takes the devices' place, and the pencil is filled with the accent color while it's open.
-    // Closing it any way, with Done, the pencil or hiding the window, applies and saves what was changed.
+    // Closing it any way, with the pencil, the gear or hiding the window, applies and saves what was changed.
     private void ShowListEditor(bool open)
     {
         var wasOpen = DeviceListArea.Visibility == Visibility.Visible;

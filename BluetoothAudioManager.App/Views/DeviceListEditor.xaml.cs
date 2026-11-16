@@ -33,9 +33,6 @@ public partial class DeviceListEditor : UserControl
         InitializeComponent();
     }
 
-    /// <summary>Raised when Done is clicked, to go back to the devices.</summary>
-    public event Action? DoneClicked;
-
     /// <summary>The devices in the order they're shown here, each with whether the app shows it.</summary>
     public IReadOnlyList<DeviceListEntry> Entries => _entries;
 
@@ -174,6 +171,4 @@ public partial class DeviceListEditor : UserControl
             EntriesPanel.ReleaseMouseCapture();
         }
     }
-
-    private void DoneButton_Click(object sender, RoutedEventArgs e) => DoneClicked?.Invoke();
 }
