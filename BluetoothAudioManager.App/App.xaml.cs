@@ -64,22 +64,23 @@ public partial class App : Application
         _window.ContentRendered += (_, _) => StartupLog.Mark("Window shown");
         _window.UseUpdater(_updater);
         _trayIcon = new TrayIcon(_window.Toggle, ExitApp, InstallUpdate, CheckForUpdates, _updater.CurrentVersion);
-        _updateNotification = new UpdateNotification(InstallUpdate, _window.ShowInCorner);
+        _updateNotification = new UpdateNotification(InstallUpdate, _window.ShowAndFocus);
         _window.LowBatteryAlert += _trayIcon.ShowNotification;
         _window.UpdateClicked += InstallUpdate;
+        _window.UpdateDismissed += DismissUpdate;
         _updater.UpdateReady += OnUpdateReady;
         _window.StartMonitoring();
         StartupLog.Mark("Devices watched");
         _showRequestWait = ThreadPool.RegisterWaitForSingleObject(
             _showRequest,
-            (_, _) => Dispatcher.BeginInvoke(() => _window.ShowInCorner()),
+            (_, _) => Dispatcher.BeginInvoke(() => _window.ShowAndFocus()),
             null,
             Timeout.Infinite,
             false);
 
         if (showWindow)
         {
-            _window.ShowInCorner();
+            _window.ShowAndFocus();
         }
 
         _updater.Start();
@@ -109,6 +110,17 @@ public partial class App : Application
         _trayIcon?.ShowUpdate(version);
         _window?.ShowUpdateReady(version);
         // _updateNotification?.Show(version);
+    }
+
+    // The tray menu stops offering it straight away. If the updater couldn't be reached, the files stay, and the
+    // update is offered again on its next look at the updater, within a minute.
+    private async void DismissUpdate(string version)
+    {
+        _trayIcon?.HideUpdate();
+        if (_updater is not null && !await _updater.DismissAsync(version))
+        {
+            StartupLog.Write($"The updater didn't confirm dismissing version {version}.");
+        }
     }
 
     private async void CheckForUpdates()

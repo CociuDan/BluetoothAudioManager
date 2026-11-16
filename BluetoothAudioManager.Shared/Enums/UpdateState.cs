@@ -2,18 +2,15 @@ namespace BluetoothAudioManager.Shared.Enums;
 
 public enum UpdateState
 {
-    /// <summary>The installed version is the latest.</summary>
+    /// <summary>The installed version is the latest, or the newer one was dismissed.</summary>
     None,
 
     /// <summary>A newer version is downloaded, checked and unpacked, ready to install.</summary>
     Ready,
 
-    /// <summary>A newer version is being downloaded.</summary>
-    Downloading,
-
     /// <summary>
-    /// A newer version is downloaded and being unpacked beside the app, so installing only switches folders.
-    /// The app shows it as Installing.
+    /// A newer version is being downloaded, unpacked and got ready beside the app, so installing only switches folders.
+    /// The app shows it as Preparing for install.
     /// </summary>
     Preparing,
 

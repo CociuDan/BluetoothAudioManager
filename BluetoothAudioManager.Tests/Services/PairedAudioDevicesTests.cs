@@ -34,4 +34,23 @@ public class PairedAudioDevicesTests
     {
         Assert.Equal(expected, PairedAudioDevices.IsAirPodsWithPods(new PairedAudioDevice("AirPods", productId)));
     }
+
+    [Theory]
+    [InlineData("c0:b2:2f:6c:69:c6", 0xC0B22F6C69C6UL)]
+    [InlineData("C0-B2-2F-6C-69-C6", 0xC0B22F6C69C6UL)]
+    [InlineData("00:00:00:00:00:01", 0x1UL)]
+    public void ParseAddress_ReadsTheAddressWindowsKeeps(string text, ulong expected)
+    {
+        Assert.Equal(expected, PairedAudioDevices.ParseAddress(text));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("c0:b2:2f:6c:69")]
+    [InlineData("not an address")]
+    public void ParseAddress_AnythingElse_IsNull(string? text)
+    {
+        Assert.Null(PairedAudioDevices.ParseAddress(text));
+    }
 }

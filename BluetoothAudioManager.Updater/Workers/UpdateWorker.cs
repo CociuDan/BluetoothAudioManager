@@ -12,7 +12,7 @@ namespace BluetoothAudioManager.Updater.Workers;
 /// <summary>
 /// The service's work: checks GitHub on a schedule and when the app asks, keeps the latest version's installer
 /// downloaded and checked in the install folder's hidden .update folder with its app unpacked beside it, and swaps
-/// that in to update when the installed app asks.
+/// that in to update when the installed app asks, or deletes it all when the app dismisses that version.
 /// </summary>
 public sealed class UpdateWorker : BackgroundService
 {
@@ -42,7 +42,7 @@ public sealed class UpdateWorker : BackgroundService
                 var settings = UpdaterSettings.Load();
                 if (settings.CheckAutomatically)
                 {
-                    await CheckAsync(stop);
+                    await CheckAsync(askedByApp: false, stop);
                 }
 
                 await Task.Delay(settings.CheckEvery, stop);
@@ -70,7 +70,12 @@ public sealed class UpdateWorker : BackgroundService
                 return UpdaterPipe.Format(_status);
 
             case [UpdaterPipe.CheckCommand]:
-                return UpdaterPipe.Format(await CheckAsync(stop));
+                return UpdaterPipe.Format(await CheckAsync(askedByApp: true, stop));
+
+            case [UpdaterPipe.DismissCommand, var version]:
+                return await DismissAsync(client, version, stop)
+                    ? UpdaterPipe.OkReply
+                    : UpdaterPipe.Format(new UpdateStatus(UpdateState.Failed));
 
             case [UpdaterPipe.ReleaseNotesCommand]:
                 var release = await _github.LatestReleaseNotesAsync(stop);
@@ -127,22 +132,34 @@ public sealed class UpdateWorker : BackgroundService
         }
     }
 
-    private async Task<UpdateStatus> CheckAsync(CancellationToken stop)
+    /// <param name="askedByApp">
+    /// Whether someone asked for this check, with Check now or the tray menu's Check for updates. Only then is a
+    /// dismissed version downloaded and offered again.
+    /// </param>
+    private async Task<UpdateStatus> CheckAsync(bool askedByApp, CancellationToken stop)
     {
         await _checkGate.WaitAsync(stop);
         try
         {
             var latest = await _github.LatestAsync(stop);
 
-            // A version that failed to install isn't offered again, until a newer one comes out.
+            // A version that failed to install isn't offered again, until a newer one comes out. Neither is a dismissed
+            // one, unless someone asks for a check.
             if (latest is null
                 || !Versions.IsNewer(latest.Version, InstallLayout.InstalledVersion)
                 || latest.Version == InstallLayout.FailedVersion
+                || (!askedByApp && latest.Version == InstallLayout.DismissedVersion)
                 || SetupPath is not { } path)
             {
                 _status = new UpdateStatus(UpdateState.None);
                 _ready = null;
                 return _status;
+            }
+
+            // Asked for again, it's no longer dismissed, so the checks on the schedule keep offering it.
+            if (latest.Version == InstallLayout.DismissedVersion)
+            {
+                RecordDismissed(null);
             }
 
             // Already downloaded and unpacked, there's nothing to do but keep offering it.
@@ -151,9 +168,9 @@ public sealed class UpdateWorker : BackgroundService
                 return _status;
             }
 
-            // Asked meanwhile, the status says how far it got, which the app's settings show.
+            // Asked meanwhile, the status says it's being prepared, which the app's settings show, until it's ready.
             _ready = null;
-            _status = new UpdateStatus(UpdateState.Downloading, latest.Version);
+            _status = new UpdateStatus(UpdateState.Preparing, latest.Version);
 
             // A newer download always replaces the one before, as there's only ever this one file.
             PrepareUpdateFolder(Path.GetDirectoryName(path)!);
@@ -175,7 +192,6 @@ public sealed class UpdateWorker : BackgroundService
             }
 
             UpdaterLog.Write($"Version {latest.Version} is downloaded.");
-            _status = new UpdateStatus(UpdateState.Preparing, latest.Version);
             await PrepareAsync(latest, path, stop);
 
             // Offered once unpacked, so installing only switches folders. If unpacking failed, installing takes the
@@ -204,6 +220,67 @@ public sealed class UpdateWorker : BackgroundService
         finally
         {
             _checkGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Dismisses a version, if the installed app is the one asking: notes it, so it isn't downloaded or offered again
+    /// until a newer one comes out or someone asks for a check, and deletes its downloaded installer and unpacked app.
+    /// </summary>
+    private async Task<bool> DismissAsync(PipeClient client, string version, CancellationToken stop)
+    {
+        if (InstallLayout.InstallFolder is not { } installFolder
+            || !IsInstalledApp(client, installFolder)
+            || Volatile.Read(ref _installing) == 1)
+        {
+            return false;
+        }
+
+        // Waits for a check that's under way, so its files aren't deleted while it writes them.
+        await _checkGate.WaitAsync(stop);
+        try
+        {
+            RecordDismissed(version);
+
+            // A newer version got ready meanwhile is kept, as it wasn't the one dismissed.
+            if (_status.Version is { } offered && offered != version)
+            {
+                UpdaterLog.Write($"Version {version} dismissed from session {client.SessionId}, but {offered} is ready instead, so it's kept.");
+                return true;
+            }
+
+            _status = new UpdateStatus(UpdateState.None);
+            _ready = null;
+            DeleteIfThere(InstallLayout.UpdateFolder(installFolder));
+            UpdaterLog.Write($"Version {version} dismissed from session {client.SessionId}, and its files deleted.");
+            return true;
+        }
+        finally
+        {
+            _checkGate.Release();
+        }
+    }
+
+    // Kept in the app's registry key, beside the failed version, where only administrators and Windows can change it.
+    private static void RecordDismissed(string? version)
+    {
+        try
+        {
+            using var machine = InstallLayout.OpenMachineKey();
+            using var key = machine.CreateSubKey(InstallLayout.RegistryKeyPath);
+            if (version is null)
+            {
+                key.DeleteValue(InstallLayout.DismissedVersionValue, throwOnMissingValue: false);
+            }
+            else
+            {
+                key.SetValue(InstallLayout.DismissedVersionValue, version);
+            }
+        }
+        catch (Exception exception)
+        {
+            // Then a dismissed version is offered again on the next check, which is no worse than before.
+            UpdaterLog.Write($"Couldn't note the dismissed version: {exception.Message}");
         }
     }
 
@@ -445,7 +522,7 @@ public sealed class UpdateWorker : BackgroundService
 
         if (on)
         {
-            _ = Task.Run(() => CheckAsync(stop), stop);
+            _ = Task.Run(() => CheckAsync(askedByApp: false, stop), stop);
         }
         else
         {

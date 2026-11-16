@@ -87,6 +87,13 @@ internal sealed class TrayIcon : IDisposable
         _updateSeparator.Visible = true;
     }
 
+    /// <summary>Removes the update item, once the update is dismissed.</summary>
+    public void HideUpdate()
+    {
+        _updateItem.Visible = false;
+        _updateSeparator.Visible = false;
+    }
+
     public void Dispose()
     {
         // Hiding it first stops a dead icon lingering in the tray until the mouse passes over it.

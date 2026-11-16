@@ -58,7 +58,6 @@ public partial class MainWindow : Window
     private double _allDevicesHeight;
     private DateTimeOffset _lastHiddenByClickAway;
     private bool _closeAllowed;
-    private bool _updateBarDismissed;
     private string? _airPodsName;
     private string? _readyUpdateVersion;
     private AirPodsFamily? _airPodsFamily;
@@ -79,6 +78,9 @@ public partial class MainWindow : Window
 
     /// <summary>Raised when Update now is clicked in the update bar.</summary>
     public event Action? UpdateClicked;
+
+    /// <summary>Raised with the version when the update bar's X dismisses it.</summary>
+    public event Action<string>? UpdateDismissed;
 
     /// <summary>Whether ear detection paused media that it will resume when the pods go back in.</summary>
     public bool HasPausedMedia => _pausedApps.Count > 0;
@@ -115,13 +117,14 @@ public partial class MainWindow : Window
         Loaded += (_, _) =>
         {
             SizeToDevices();
-            PositionInCorner();
+            PositionWindow();
         };
 
         AirPodsHeader.SettingsClicked += ToggleSettings;
         AppSettingsView.ThemeChanged += () => _otherRows.ForEach(row => row.ShowCurrentPicture());
+        AppSettingsView.RememberPositionChanged += OnRememberPositionChanged;
         AppSettingsView.UpdateClicked += () => UpdateClicked?.Invoke();
-        AppSettingsView.UpdateFoundByCheck += version => ShowUpdateReady(version, explicitlyChecked: true);
+        AppSettingsView.UpdateFoundByCheck += ShowUpdateReady;
 
         // While a device is dragged, the area holding the devices has the mouse, so these follow it to the drop.
         AirPodsHeader.DragStarted += () => StartDrag(AirPodsSection);
@@ -178,7 +181,7 @@ public partial class MainWindow : Window
         _earDetectionTimer.Start();
     }
 
-    /// <summary>Shows the window above the bottom-right of the taskbar, or hides it if it's showing.</summary>
+    /// <summary>Shows the window, or hides it if it's showing.</summary>
     public void Toggle()
     {
         if (IsVisible)
@@ -187,15 +190,19 @@ public partial class MainWindow : Window
         }
         else if (DateTimeOffset.Now - _lastHiddenByClickAway >= ClickAwayGrace)
         {
-            ShowInCorner();
+            ShowAndFocus();
         }
     }
 
-    public void ShowInCorner()
+    /// <summary>
+    /// Shows the window in the bottom-right corner above the taskbar, or where it was last dragged to
+    /// if Remember app position is on, and brings it to the front.
+    /// </summary>
+    public void ShowAndFocus()
     {
         ArrangeRows();
         SizeToDevices();
-        PositionInCorner();
+        PositionWindow();
         DevicesScroller.ScrollToTop();
         Show();
         Activate();
@@ -213,17 +220,12 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Shows the bar offering to install a downloaded update.</summary>
-    public void ShowUpdateReady(string version, bool explicitlyChecked = false)
+    public void ShowUpdateReady(string version)
     {
         _readyUpdateVersion = version;
         AppSettingsView.ShowUpdateReady();
         UpdateText.Text = $"Version {version} is ready";
-        if (explicitlyChecked)
-        {
-            _updateBarDismissed = false;
-        }
-
-        UpdateBar.Visibility = _updateBarDismissed ? Visibility.Collapsed : Visibility.Visible;
+        UpdateBar.Visibility = Visibility.Visible;
 
         if (IsVisible)
         {
@@ -321,7 +323,7 @@ public partial class MainWindow : Window
         {
             _devicesShownOnce = true;
             SizeToDevices();
-            PositionInCorner();
+            PositionWindow();
         }
     }
 
@@ -329,7 +331,8 @@ public partial class MainWindow : Window
     private string TitleFor(PairedAudioDevice device) =>
         device.IsUsbAdapter ? _jabra.HeadsetNameFor(device.Name) ?? device.Name : device.Name;
 
-    // The picture matching the device's name, or the generic headphones placeholder when there's none.
+    // The picture matching the row's title, or the generic headphones placeholder when there's none. For a headset on a
+    // USB adapter that's the headset's name once Jabra's kit reports it, as the adapter's name rarely says which headset.
     // AirPods Max follow the theme, and renamed ones are still recognized by their product ID.
     private ImageSource PictureFor(PairedAudioDevice device)
     {
@@ -338,7 +341,7 @@ public partial class MainWindow : Window
             return ProductPictures.AirPodsMaxFor(device.AppleProductId, WindowBackdrop.IsLight);
         }
 
-        return ProductPictures.ForDeviceName(device.Name) ?? (ImageSource)FindResource("GenericHeadphonesImage");
+        return ProductPictures.ForDeviceName(TitleFor(device)) ?? (ImageSource)FindResource("GenericHeadphonesImage");
     }
 
     private void ShowAirPodsPictures(AirPodsFamily family)
@@ -599,10 +602,11 @@ public partial class MainWindow : Window
 
     private void BottomEdge_DragDelta(object sender, DragDeltaEventArgs e) => ResizeTo(Height + e.VerticalChange);
 
+    // Dragging the top edge moves the window's top too, so its position is saved with its height.
     private void ResizeEdge_DragCompleted(object sender, DragCompletedEventArgs e)
     {
         _settings.WindowHeight = Height;
-        _settings.Save();
+        SavePosition();
     }
 
     private void ToggleSettings() => ShowSettings(SettingsPanel.Visibility != Visibility.Visible);
@@ -703,15 +707,27 @@ public partial class MainWindow : Window
         }
     }
 
-    private void CaptionBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DragMove();
+    // DragMove returns once the mouse is let go, so the window has reached its new place.
+    private void CaptionBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        DragMove();
+        SavePosition();
+    }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Hide();
 
     private void UpdateButton_Click(object sender, RoutedEventArgs e) => UpdateClicked?.Invoke();
 
+    // Dismisses the version, not just the bar: the updater deletes its files and doesn't offer it again by itself.
     private void DismissUpdateButton_Click(object sender, RoutedEventArgs e)
     {
-        _updateBarDismissed = true;
+        if (_readyUpdateVersion is { } version)
+        {
+            UpdateDismissed?.Invoke(version);
+        }
+
+        _readyUpdateVersion = null;
+        AppSettingsView.ShowUpdateDismissed();
         UpdateBar.Visibility = Visibility.Collapsed;
         if (IsVisible)
         {
@@ -786,11 +802,58 @@ public partial class MainWindow : Window
         DevicesView.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
     }
 
+    // Where it was last dragged to, if that's remembered and its title bar is still on a screen, or else the
+    // bottom-right corner above the taskbar. It may be taller than when it was saved, so its bottom is kept on screen.
+    private void PositionWindow()
+    {
+        if (_settings is { RememberPosition: true, WindowLeft: { } left, WindowTop: { } top } && IsTitleBarOnScreen(left, top))
+        {
+            var screensBottom = SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight;
+            Left = left;
+            Top = Math.Max(SystemParameters.VirtualScreenTop, Math.Min(top, screensBottom - Height));
+            return;
+        }
+
+        PositionInCorner();
+    }
+
+    // The middle of the title bar, which is what moves the window, so a window found there can always be dragged back.
+    private bool IsTitleBarOnScreen(double left, double top)
+    {
+        var x = left + Width / 2;
+        var y = top + TitleBarHeight / 2;
+        return x >= SystemParameters.VirtualScreenLeft
+            && x <= SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth
+            && y >= SystemParameters.VirtualScreenTop
+            && y <= SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight;
+    }
+
     private void PositionInCorner()
     {
         var workArea = SystemParameters.WorkArea;
         Left = workArea.Right - Width - CornerGap;
         Top = workArea.Bottom - Height - CornerGap;
+    }
+
+    // Saved whether or not it's remembered, so turning Remember app position on keeps the window where it is.
+    private void SavePosition()
+    {
+        _settings.WindowLeft = Left;
+        _settings.WindowTop = Top;
+        _settings.Save();
+    }
+
+    // Turned on, the window stays where it is now. Turned off, it goes back to the corner straight away.
+    private void OnRememberPositionChanged(bool on)
+    {
+        if (on)
+        {
+            SavePosition();
+        }
+        else
+        {
+            PositionInCorner();
+        }
     }
 
     private void OnClickedAway()

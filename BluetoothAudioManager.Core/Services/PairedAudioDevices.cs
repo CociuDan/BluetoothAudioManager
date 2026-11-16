@@ -1,3 +1,4 @@
+using System.Globalization;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Enumeration;
 using BluetoothAudioManager.Core.Enums;
@@ -13,6 +14,10 @@ public static class PairedAudioDevices
 
     private const string AirPodsMaxName = "AirPods Max";
     private const string InstanceIdProperty = "System.Devices.DeviceInstanceId";
+
+    // Windows keeps these for every pairing, so they can be read even while Bluetooth is off.
+    private const string AddressProperty = "System.Devices.Aep.DeviceAddress";
+    private const string MajorClassProperty = "System.Devices.Aep.Bluetooth.Cod.Major";
 
     public static bool IsAirPods(string deviceName) =>
         deviceName.Contains(AirPodsName, StringComparison.OrdinalIgnoreCase);
@@ -31,18 +36,23 @@ public static class PairedAudioDevices
     public static bool IsAirPodsWithPods(PairedAudioDevice device) =>
         IsAirPodsWithPods(device.Name) && AppleProducts.FamilyOf(device.AppleProductId) != AirPodsFamily.AirPodsMax;
 
+    /// <summary>
+    /// The paired audio devices and plugged-in USB adapters. Paired devices are found from what Windows keeps for each
+    /// pairing, so they're listed even while Bluetooth is off, such as when the app starts with it off.
+    /// </summary>
     public static async Task<IReadOnlyList<PairedAudioDevice>> FindAsync()
     {
-        var paired = await DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true));
+        var paired = await DeviceInformation.FindAllAsync(
+            BluetoothDevice.GetDeviceSelectorFromPairingState(true),
+            [AddressProperty, MajorClassProperty],
+            DeviceInformationKind.AssociationEndpoint);
         var devices = new List<PairedAudioDevice>();
 
         foreach (var info in paired)
         {
-            using var device = await BluetoothDevice.FromIdAsync(info.Id);
-            if (device?.ClassOfDevice.MajorClass == BluetoothMajorClass.AudioVideo
-                && devices.All(found => found.Name != info.Name))
+            if (devices.All(found => found.Name != info.Name) && await AudioDeviceAddressAsync(info) is { } address)
             {
-                devices.Add(new PairedAudioDevice(info.Name, await ReadAppleProductIdAsync(device.BluetoothAddress)));
+                devices.Add(new PairedAudioDevice(info.Name, await ReadAppleProductIdAsync(address)));
             }
         }
 
@@ -59,6 +69,38 @@ public static class PairedAudioDevices
         }
 
         return devices;
+    }
+
+    /// <param name="text">A Bluetooth address as Windows writes it, such as "a1:b2:c3:d4:e5:f6".</param>
+    /// <returns>The address as a number, or null if the text isn't one.</returns>
+    public static ulong? ParseAddress(string? text)
+    {
+        var digits = (text ?? "").Replace(":", "").Replace("-", "");
+        return digits.Length == 12 && ulong.TryParse(digits, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var address)
+            ? address
+            : null;
+    }
+
+    // The address of an audio device, or null for anything else. Read from what Windows keeps for the pairing, and only
+    // if that's missing, from the device itself, which Windows can't open while Bluetooth is off.
+    private static async Task<ulong?> AudioDeviceAddressAsync(DeviceInformation info)
+    {
+        if (info.Properties.TryGetValue(MajorClassProperty, out var major) && major is IConvertible
+            && info.Properties.TryGetValue(AddressProperty, out var text) && ParseAddress(text as string) is { } address)
+        {
+            return Convert.ToInt32(major, CultureInfo.InvariantCulture) == (int)BluetoothMajorClass.AudioVideo ? address : null;
+        }
+
+        try
+        {
+            using var device = await BluetoothDevice.FromIdAsync(info.Id);
+            return device?.ClassOfDevice.MajorClass == BluetoothMajorClass.AudioVideo ? device.BluetoothAddress : null;
+        }
+        catch (Exception)
+        {
+            // Left out until the next look, as before.
+            return null;
+        }
     }
 
     // Windows names each Bluetooth service of a paired device with its address and, for Apple devices,

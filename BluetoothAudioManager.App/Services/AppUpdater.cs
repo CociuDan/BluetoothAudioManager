@@ -22,6 +22,9 @@ internal sealed class AppUpdater : IDisposable
     private static readonly TimeSpan CheckTimeout = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan ReleaseNotesTimeout = TimeSpan.FromSeconds(15);
 
+    // Dismissing waits for any check under way, then deletes the prepared files.
+    private static readonly TimeSpan DismissTimeout = TimeSpan.FromSeconds(30);
+
     private readonly DispatcherTimer _timer = new() { Interval = AskEvery };
     private string? _announced;
     private UpdateStatus? _readyStatus;
@@ -77,16 +80,37 @@ internal sealed class AppUpdater : IDisposable
         _ = AnnounceStatusAsync();
     }
 
-    /// <summary>Asks the updater to check GitHub now. A new version found is announced as usual.</summary>
+    /// <summary>
+    /// Asks the updater to check GitHub now. A new version found is announced as usual, and so is one that was
+    /// dismissed, as asking for a check offers it again.
+    /// </summary>
     public async Task<UpdateStatus> CheckNowAsync()
     {
         var status = UpdaterPipe.Parse(await UpdaterPipe.SendAsync(UpdaterPipe.CheckCommand, CheckTimeout));
+        _announced = null;
         Announce(status);
         return status;
     }
 
     /// <summary>
-    /// Asks the updater how far it is right now, such as downloading or unpacking a new version, without waiting for it.
+    /// Dismisses the ready version: the updater deletes its files and doesn't offer it again by itself.
+    /// Returns whether the updater did it. If not, the version is announced again, as it's still there.
+    /// </summary>
+    public async Task<bool> DismissAsync(string version)
+    {
+        _readyStatus = null;
+        var dismissed = IsInstalled
+            && await UpdaterPipe.SendAsync($"{UpdaterPipe.DismissCommand} {version}", DismissTimeout) == UpdaterPipe.OkReply;
+        if (!dismissed)
+        {
+            _announced = null;
+        }
+
+        return dismissed;
+    }
+
+    /// <summary>
+    /// Asks the updater how far it is right now, such as preparing a new version for install, without waiting for it.
     /// A build that wasn't installed has nothing to ask.
     /// </summary>
     public async Task<UpdateStatus> StatusNowAsync() =>

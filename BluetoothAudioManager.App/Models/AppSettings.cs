@@ -15,6 +15,15 @@ public sealed class AppSettings
     /// <summary>The height the user dragged the window to, or null if they haven't.</summary>
     public double? WindowHeight { get; set; }
 
+    /// <summary>Whether the window opens where it was last dragged to, rather than in the bottom-right corner. Off by default.</summary>
+    public bool RememberPosition { get; set; }
+
+    /// <summary>The left edge of where the window was last dragged to, or null if it hasn't been.</summary>
+    public double? WindowLeft { get; set; }
+
+    /// <summary>The top edge of where the window was last dragged to, or null if it hasn't been.</summary>
+    public double? WindowTop { get; set; }
+
     public bool EarDetectionEnabled { get; set; }
 
     public bool LowBatteryEnabled { get; set; }

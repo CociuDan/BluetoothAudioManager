@@ -9,7 +9,7 @@ using BluetoothAudioManager.Shared.Models;
 namespace BluetoothAudioManager.App.Views;
 
 /// <summary>
-/// The app's settings: the theme, starting with the system, updates, and how see-through the window is. Changes apply straight away and are saved.
+/// The app's settings: the theme, starting with the system, where the window opens, updates, and how see-through the window is. Changes apply straight away and are saved.
 /// </summary>
 public partial class AppSettingsPanel : UserControl
 {
@@ -33,6 +33,9 @@ public partial class AppSettingsPanel : UserControl
     /// <summary>Raised after the theme changes, for anything that has to be swapped by hand, such as pictures.</summary>
     public event Action? ThemeChanged;
 
+    /// <summary>Raised with the new setting after Remember app position is turned on or off.</summary>
+    public event Action<bool>? RememberPositionChanged;
+
     /// <summary>Raised when the ready update is chosen for installation.</summary>
     public event Action? UpdateClicked;
 
@@ -46,6 +49,7 @@ public partial class AppSettingsPanel : UserControl
         _showing = true;
         ThemeToggle.IsChecked = settings.UseLightTheme;
         StartupToggle.IsChecked = StartupRegistration.IsEnabled;
+        RememberPositionToggle.IsChecked = settings.RememberPosition;
         TransparencySlider.Value = WindowBackdrop.ClampTransparency(settings.Transparency);
         _showing = false;
         UpdateText();
@@ -69,6 +73,18 @@ public partial class AppSettingsPanel : UserControl
         ShowUpdates();
     }
 
+    /// <summary>Changes the update action back to checking, once the ready version is dismissed.</summary>
+    public void ShowUpdateDismissed()
+    {
+        _updateReady = false;
+        if (!_checking)
+        {
+            CheckNowButton.Content = "Check now";
+        }
+
+        ShowUpdates();
+    }
+
     private async void CheckNowButton_Click(object sender, RoutedEventArgs e)
     {
         if (Updater is null || _checking)
@@ -86,7 +102,7 @@ public partial class AppSettingsPanel : UserControl
         CheckNowButton.IsEnabled = false;
         CheckNowButton.Content = CheckingText;
 
-        // The check answers once a new version is downloaded and unpacked, so meanwhile the button follows how far it got.
+        // The check answers once a new version is prepared for install, so meanwhile the button says how far it got.
         var check = Updater.CheckNowAsync();
         while (await Task.WhenAny(check, Task.Delay(StageCheckEvery)) != check)
         {
@@ -96,7 +112,7 @@ public partial class AppSettingsPanel : UserControl
         FinishWorking(await check, foundByCheck: true);
     }
 
-    // A download the updater started by itself shows the same way, until it's ready.
+    // A version the updater started preparing by itself shows the same way, until it's ready.
     private async void FollowWorkInProgress()
     {
         if (Updater is null || _checking || _updateReady)
@@ -105,14 +121,14 @@ public partial class AppSettingsPanel : UserControl
         }
 
         var status = await Updater.StatusNowAsync();
-        if (status.State is not (UpdateState.Downloading or UpdateState.Preparing))
+        if (status.State != UpdateState.Preparing)
         {
             return;
         }
 
         _checking = true;
         CheckNowButton.IsEnabled = false;
-        while (status.State is UpdateState.Downloading or UpdateState.Preparing)
+        while (status.State == UpdateState.Preparing)
         {
             ShowStage(status);
             await Task.Delay(StageCheckEvery);
@@ -125,12 +141,7 @@ public partial class AppSettingsPanel : UserControl
 
     private void ShowStage(UpdateStatus status)
     {
-        CheckNowButton.Content = status.State switch
-        {
-            UpdateState.Downloading => "Downloading…",
-            UpdateState.Preparing => "Installing…",
-            _ => CheckingText,
-        };
+        CheckNowButton.Content = status.State == UpdateState.Preparing ? "Preparing for install…" : CheckingText;
     }
 
     private void FinishWorking(UpdateStatus status, bool foundByCheck)
@@ -199,6 +210,19 @@ public partial class AppSettingsPanel : UserControl
         UpdateText();
     }
 
+    private void RememberPositionToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null)
+        {
+            return;
+        }
+
+        _settings.RememberPosition = RememberPositionToggle.IsChecked == true;
+        _settings.Save();
+        UpdateText();
+        RememberPositionChanged?.Invoke(_settings.RememberPosition);
+    }
+
     private void TransparencySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (_settings is null || _showing)
@@ -223,6 +247,7 @@ public partial class AppSettingsPanel : UserControl
     {
         ThemeText.Text = ThemeToggle.IsChecked == true ? "Light" : "Dark";
         StartupText.Text = StartupToggle.IsChecked == true ? "On" : "Off";
+        RememberPositionText.Text = RememberPositionToggle.IsChecked == true ? "On" : "Off";
         AutomaticUpdatesText.Text = AutomaticUpdatesToggle.IsChecked == true ? "On" : "Off";
         TransparencyText.Text = TransparencySlider.Value == 0 ? "Solid" : $"{TransparencySlider.Value:0}%";
     }

@@ -35,6 +35,19 @@
                           AutomationProperties.Name="Start with the System" />
         </Grid>
 
+        <Grid Margin="0,20,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Remember app position" FontSize="14" />
+            <TextBlock x:Name="RememberPositionText" Grid.Column="1" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" />
+            <ToggleButton x:Name="RememberPositionToggle" Grid.Column="2" Style="{StaticResource SwitchStyle}"
+                          VerticalAlignment="Center" Click="RememberPositionToggle_Click"
+                          AutomationProperties.Name="Remember app position" />
+        </Grid>
+
         <!-- Only for the installed app, which has an updater to ask. -->
         <Grid x:Name="AutomaticUpdatesRow" Margin="0,20,0,0" Visibility="Collapsed">
             <Grid.ColumnDefinitions>

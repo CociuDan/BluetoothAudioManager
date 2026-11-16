@@ -7,15 +7,15 @@ namespace BluetoothAudioManager.Shared.Helpers;
 
 /// <summary>
 /// How the app talks to the updater service: one line asked, one line answered, over a local named pipe.
-/// The app can only ask for the status, a check, the install of what the updater downloaded and checked itself,
-/// release notes, whether it checks by itself, or to start the app with the system again, so nothing can use the
-/// updater to run files of its own choosing.
+/// The app can only ask for the status, a check, the install or dismissal of what the updater downloaded and checked
+/// itself, release notes, whether it checks by itself, or to start the app with the system again, so nothing can use
+/// the updater to run files of its own choosing.
 /// </summary>
 public static class UpdaterPipe
 {
     public const string PipeName = "BluetoothAudioManager.Updater";
 
-    /// <summary>Answers with the status, including whether a new version is downloading or being unpacked.</summary>
+    /// <summary>Answers with the status, including whether a new version is being prepared for install.</summary>
     public const string StatusCommand = "status";
 
     /// <summary>Checks GitHub now, downloads any update, then answers with the status.</summary>
@@ -29,6 +29,12 @@ public static class UpdaterPipe
 
     /// <summary>Added after install, to open the app again with its window showing.</summary>
     public const string ShowWindowOption = "window";
+
+    /// <summary>
+    /// Followed by a version, dismisses it: deletes its downloaded and unpacked files, and doesn't download or offer it
+    /// again by itself, only when the app asks for a check. Answers ok.
+    /// </summary>
+    public const string DismissCommand = "dismiss";
 
     /// <summary>
     /// Alone, answers whether the updater checks for updates by itself: on or off.
@@ -52,8 +58,10 @@ public static class UpdaterPipe
     private const string NoneReply = "none";
     private const string ReadyReply = "ready";
     private const string FailedReply = "failed";
-    private const string DownloadingReply = "downloading";
     private const string PreparingReply = "preparing";
+
+    // Older updaters reported downloading on its own, before preparing. Read as preparing, in case one answers.
+    private const string DownloadingReply = "downloading";
 
     public static string Format(UpdateStatus status)
     {
@@ -63,7 +71,6 @@ public static class UpdaterPipe
                 $"{ReadyReply} {FormatReleaseNotes(version, notes)}",
             UpdateState.Ready when status.Version is { } version => $"{ReadyReply} {version}",
             UpdateState.Ready => FailedReply,
-            UpdateState.Downloading when status.Version is { } version => $"{DownloadingReply} {version}",
             UpdateState.Preparing when status.Version is { } version => $"{PreparingReply} {version}",
             UpdateState.None => NoneReply,
             _ => FailedReply,
@@ -85,8 +92,7 @@ public static class UpdaterPipe
 
         return parts switch
         {
-            [DownloadingReply, var version] => new UpdateStatus(UpdateState.Downloading, version),
-            [PreparingReply, var version] => new UpdateStatus(UpdateState.Preparing, version),
+            [PreparingReply or DownloadingReply, var version] => new UpdateStatus(UpdateState.Preparing, version),
             [NoneReply] => new UpdateStatus(UpdateState.None),
             _ => new UpdateStatus(UpdateState.Failed),
         };

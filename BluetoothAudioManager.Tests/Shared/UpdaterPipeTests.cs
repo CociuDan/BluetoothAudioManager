@@ -13,7 +13,6 @@ public class UpdaterPipeTests
                  {
                      new UpdateStatus(UpdateState.Ready, "0.0.3"),
                      new UpdateStatus(UpdateState.Ready, "0.0.4", "## Changes\n\n- Added a feature\n- Fixed a bug"),
-                     new UpdateStatus(UpdateState.Downloading, "0.0.5"),
                      new UpdateStatus(UpdateState.Preparing, "0.0.5"),
                      new UpdateStatus(UpdateState.None),
                      new UpdateStatus(UpdateState.Failed),
@@ -27,6 +26,12 @@ public class UpdaterPipeTests
     public void Parse_ReadsLegacyReadyStatus()
     {
         Assert.Equal(new UpdateStatus(UpdateState.Ready, "0.0.3"), UpdaterPipe.Parse("ready 0.0.3"));
+    }
+
+    [Fact]
+    public void Parse_ReadsAnOlderUpdatersDownloadingAsPreparing()
+    {
+        Assert.Equal(new UpdateStatus(UpdateState.Preparing, "0.0.5"), UpdaterPipe.Parse("downloading 0.0.5"));
     }
 
     [Theory]

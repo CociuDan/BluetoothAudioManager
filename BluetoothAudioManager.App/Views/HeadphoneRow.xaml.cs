@@ -99,13 +99,22 @@ public partial class HeadphoneRow : UserControl, IDisposable
         }
     }
 
-    /// <summary>The title shown and used in alerts, for when a better name than the Windows one becomes known.</summary>
+    /// <summary>
+    /// The title shown and used in alerts, for when a better name than the Windows one becomes known.
+    /// The picture is chosen again with it, as the better name can have a picture of its own.
+    /// </summary>
     public string Title
     {
         set
         {
+            if (value == _title)
+            {
+                return;
+            }
+
             _title = value;
             Header.Title = value;
+            ShowCurrentPicture();
         }
     }
 

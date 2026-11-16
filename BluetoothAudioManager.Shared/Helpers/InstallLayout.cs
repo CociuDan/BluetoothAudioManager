@@ -91,6 +91,9 @@ public static class InstallLayout
     /// <summary>A version that failed to install, so the updater doesn't offer it again.</summary>
     public const string FailedVersionValue = "FailedVersion";
 
+    /// <summary>A version dismissed from the app, so the updater doesn't download or offer it again by itself.</summary>
+    public const string DismissedVersionValue = "DismissedVersion";
+
     /// <summary>The app's own key, under HKEY_LOCAL_MACHINE, with the install folder and version.</summary>
     public const string RegistryKeyPath = @"SOFTWARE\BluetoothAudioManager";
 
@@ -140,6 +143,9 @@ public static class InstallLayout
 
     /// <summary>The version that last failed to install, or null if none has.</summary>
     public static string? FailedVersion => ReadValue(FailedVersionValue);
+
+    /// <summary>The version last dismissed from the app, or null if none has been.</summary>
+    public static string? DismissedVersion => ReadValue(DismissedVersionValue);
 
     /// <summary>Whether this process is the installed app, rather than a build run from the code.</summary>
     public static bool IsInstalledApp() =>
