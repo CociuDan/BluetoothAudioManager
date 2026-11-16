@@ -8,7 +8,6 @@
             <Border x:Name="Divider" Height="1" Margin="22,12,0,12" Visibility="Hidden"
                     Background="{DynamicResource DividerStrokeColorDefaultBrush}" />
             <local:DeviceHeader x:Name="Header" />
-            <local:VolumeSlider x:Name="VolumeControl" Margin="22,0,0,12" />
             <StackPanel x:Name="PictureArea" Width="96" HorizontalAlignment="Left" Margin="22,0,0,0">
                 <Image x:Name="Picture" Width="96" Height="96"
                        ToolTip="Headphones" AutomationProperties.Name="Headphones" />
@@ -37,8 +36,10 @@
                        ToolTip="Case" AutomationProperties.Name="Case" />
                 <local:BatteryBadge x:Name="EarbudsBadge" Grid.Row="1" Grid.ColumnSpan="2" Visibility="Hidden" />
             </Grid>
-            <!-- Takes the place of the volume slider (30 high, with 12 below) and the pictures (130), so the row keeps its height. -->
+            <!-- Takes the place of the pictures (130) and the volume slider (12 above it, 30 high), so the row keeps its height. -->
             <local:LowBatterySetting x:Name="BatterySetting" Height="172" Margin="22,0,0,0" Visibility="Collapsed" />
+            <!-- At the bottom of the card, under the pictures and batteries. -->
+            <local:VolumeSlider x:Name="VolumeControl" Margin="22,12,0,0" />
         </StackPanel>
     </Border>
 </UserControl>

@@ -216,7 +216,6 @@
                 <Border x:Name="AirPodsDivider" Height="1" Margin="22,12,0,12" Visibility="Hidden"
                         Background="{DynamicResource DividerStrokeColorDefaultBrush}" />
                 <local:DeviceHeader x:Name="AirPodsHeader" Title="AirPods" ShowSettings="True" />
-                <local:VolumeSlider x:Name="AirPodsVolume" Margin="22,0,0,12" />
                 <Grid x:Name="AirPodsParts" Height="130" Margin="22,0,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="88" />
@@ -245,7 +244,7 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- The same height as the volume slider (30, with 12 below) and the pictures (130) it replaces, so nothing else moves. -->
+                <!-- The same height as the pictures (130) and the volume slider (12 above it, 30 high) it replaces, so nothing else moves. -->
                 <StackPanel x:Name="SettingsPanel" Visibility="Collapsed" Height="172" Margin="22,0,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -262,6 +261,9 @@
                     </Grid>
                     <local:LowBatterySetting x:Name="AirPodsLowBattery" Margin="0,9,0,0" />
                 </StackPanel>
+
+                <!-- At the bottom of the card, under the pictures and batteries. -->
+                <local:VolumeSlider x:Name="AirPodsVolume" Margin="22,12,0,0" />
 
             </StackPanel>
             </Border>
