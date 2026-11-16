@@ -55,6 +55,7 @@ public partial class MainWindow : Window
     private bool _refreshingDevices;
     private bool _devicesShownOnce;
     private bool _hasAirPods;
+    private bool _placed;
     private double _smallestHeight;
     private double _allDevicesHeight;
     private DateTimeOffset _lastHiddenByClickAway;
@@ -634,6 +635,14 @@ public partial class MainWindow : Window
 
     private void SizeToDevices()
     {
+        // The window keeps its size and place while the list is being edited, and fits the devices once editing ends.
+        if (DeviceListArea.Visibility == Visibility.Visible)
+        {
+            return;
+        }
+
+        var wasInCorner = IsInCorner();
+        var bottom = Top + Height;
         double defaultHeight;
 
         if (NoDevicesPanel.Visibility == Visibility.Visible || AllHiddenPanel.Visibility == Visibility.Visible)
@@ -656,6 +665,37 @@ public partial class MainWindow : Window
         }
 
         ResizeTo(_settings.WindowHeight ?? defaultHeight);
+        KeepPlace(wasInCorner, bottom);
+    }
+
+    // Whether the window sits where it opens by default: in the bottom-right corner, above the taskbar.
+    private bool IsInCorner()
+    {
+        var workArea = SystemParameters.WorkArea;
+        return Math.Abs(Left - (workArea.Right - Width - CornerGap)) < 1
+            && Math.Abs(Top + Height - (workArea.Bottom - CornerGap)) < 1;
+    }
+
+    // Once the window has a place: in its corner it grows and shrinks upwards, keeping its bottom edge against the taskbar,
+    // as when its top edge is dragged. Anywhere else it keeps its top edge where it was put, and grows and shrinks downwards.
+    // Either way it stays on screen, and the new place is saved, so a remembered position reopens the same way.
+    private void KeepPlace(bool inCorner, double bottom)
+    {
+        if (!_placed)
+        {
+            return;
+        }
+
+        var screensBottom = SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight;
+        var top = inCorner ? bottom - Height : Math.Min(Top, screensBottom - Height);
+        top = Math.Max(SystemParameters.VirtualScreenTop, top);
+        if (Math.Abs(top - Top) < 0.5)
+        {
+            return;
+        }
+
+        Top = top;
+        SavePosition();
     }
 
     private void ResizeTo(double height)
@@ -888,6 +928,8 @@ public partial class MainWindow : Window
     // bottom-right corner above the taskbar. It may be taller than when it was saved, so its bottom is kept on screen.
     private void PositionWindow()
     {
+        _placed = true;
+
         if (_settings is { RememberPosition: true, WindowLeft: { } left, WindowTop: { } top } && IsTitleBarOnScreen(left, top))
         {
             var screensBottom = SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight;
