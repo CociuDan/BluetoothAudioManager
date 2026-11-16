@@ -108,6 +108,9 @@
                     <TextBlock Text="Bluetooth Audio Manager" Margin="8,0,0,0" FontSize="12" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <!-- Opens the device list in edit mode. The same size as the X, and filled with the accent color while editing. -->
+                    <Button x:Name="EditListButton" Style="{StaticResource CaptionButton}" Content="&#xE70F;" FontSize="13"
+                            Click="EditListButton_Click" ToolTip="Edit the list" AutomationProperties.Name="Edit the list" />
                     <!-- The same size as the X, with the device rows' settings glyph. Filled with the accent color while the settings are open. -->
                     <Button x:Name="SettingsButton" Style="{StaticResource CaptionButton}" Content="&#xE713;" FontSize="13"
                             Click="SettingsButton_Click" ToolTip="Settings" AutomationProperties.Name="Settings" />
@@ -160,6 +163,11 @@
                 <local:AppSettingsPanel x:Name="AppSettingsView" Margin="30,16,20,20" />
             </ScrollViewer>
 
+            <!-- The device list in edit mode, in place of the devices while the pencil is on. -->
+            <ScrollViewer x:Name="DeviceListArea" Grid.Row="2" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                <local:DeviceListEditor x:Name="DeviceListView" Margin="30,16,20,20" />
+            </ScrollViewer>
+
             <ScrollViewer x:Name="ReleaseNotesArea" Grid.Row="2" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="30,16,20,20">
                     <Grid>
@@ -182,6 +190,14 @@
             <StackPanel x:Name="NoDevicesPanel" Margin="30,40,20,20" Visibility="Collapsed">
                 <TextBlock Text="No paired headphones found" FontSize="16" FontWeight="SemiBold" TextAlignment="Center" />
                 <TextBlock Text="Pair them in Windows' Bluetooth settings and they'll appear here." FontSize="12"
+                           Margin="0,4,0,0" TextAlignment="Center" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+
+            <!-- When every paired device is hidden, so the window doesn't just look empty. -->
+            <StackPanel x:Name="AllHiddenPanel" Margin="30,40,20,20" Visibility="Collapsed">
+                <TextBlock Text="All your headphones are hidden" FontSize="16" FontWeight="SemiBold" TextAlignment="Center" />
+                <TextBlock Text="Use the pencil above to show them again." FontSize="12"
                            Margin="0,4,0,0" TextAlignment="Center" TextWrapping="Wrap"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </StackPanel>

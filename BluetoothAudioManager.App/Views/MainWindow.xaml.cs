@@ -54,6 +54,7 @@ public partial class MainWindow : Window
     private DateTimeOffset _lastDeviceCheck;
     private bool _refreshingDevices;
     private bool _devicesShownOnce;
+    private bool _hasAirPods;
     private double _smallestHeight;
     private double _allDevicesHeight;
     private DateTimeOffset _lastHiddenByClickAway;
@@ -125,6 +126,7 @@ public partial class MainWindow : Window
         AppSettingsView.RememberPositionChanged += OnRememberPositionChanged;
         AppSettingsView.UpdateClicked += () => UpdateClicked?.Invoke();
         AppSettingsView.UpdateFoundByCheck += ShowUpdateReady;
+        DeviceListView.DoneClicked += () => ShowListEditor(false);
 
         // While a device is dragged, the area holding the devices has the mouse, so these follow it to the drop.
         AirPodsHeader.DragStarted += () => StartDrag(AirPodsSection);
@@ -140,6 +142,7 @@ public partial class MainWindow : Window
                 ShowSettings(false);
                 _otherRows.ForEach(row => row.ShowSettings(false));
                 ShowAppSettings(false);
+                ShowListEditor(false);
             }
         };
         ShowEarDetectionSetting();
@@ -310,8 +313,8 @@ public partial class MainWindow : Window
             Refresh();
         }
 
-        AirPodsSection.Visibility = airPods.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        NoDevicesPanel.Visibility = devices.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        _hasAirPods = airPods.Count > 0;
+        ShowOnlyUnhidden();
 
         // A device paired again goes back to its saved place, and a new one goes last.
         if (added.Count > 0 && _draggedRow is null)
@@ -393,6 +396,82 @@ public partial class MainWindow : Window
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut },
             });
         }
+    }
+
+    private bool IsHidden(string orderKey) =>
+        _settings.HiddenDevices.Contains(orderKey, StringComparer.OrdinalIgnoreCase);
+
+    // Hidden devices keep their rows, collapsed, so they're still followed and come back as they were.
+    // Only a message shows when there's nothing to list: one when nothing is paired, another when everything is hidden.
+    private void ShowOnlyUnhidden()
+    {
+        AirPodsSection.Visibility = _hasAirPods && !IsHidden(AirPodsOrderKey) ? Visibility.Visible : Visibility.Collapsed;
+        _otherRows.ForEach(row => row.Visibility = IsHidden(row.DeviceName) ? Visibility.Collapsed : Visibility.Visible);
+
+        var anyPaired = _hasAirPods || _otherRows.Count > 0;
+        NoDevicesPanel.Visibility = anyPaired ? Visibility.Collapsed : Visibility.Visible;
+        AllHiddenPanel.Visibility = anyPaired && VisibleRows().Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        ShowDividers();
+    }
+
+    private void EditListButton_Click(object sender, RoutedEventArgs e) => ShowListEditor(DeviceListArea.Visibility != Visibility.Visible);
+
+    // The edit list takes the devices' place, and the pencil is filled with the accent color while it's open.
+    // Closing it any way, with Done, the pencil or hiding the window, applies and saves what was changed.
+    private void ShowListEditor(bool open)
+    {
+        var wasOpen = DeviceListArea.Visibility == Visibility.Visible;
+
+        if (open)
+        {
+            ShowAppSettings(false);
+            EndDrag(drop: false);
+            DeviceListView.Show(EntriesToEdit());
+            DeviceListArea.ScrollToTop();
+            EditListButton.SetResourceReference(BackgroundProperty, "AccentFillColorDefaultBrush");
+            EditListButton.SetResourceReference(ForegroundProperty, "TextOnAccentFillColorPrimaryBrush");
+        }
+        else
+        {
+            EditListButton.ClearValue(BackgroundProperty);
+            EditListButton.ClearValue(ForegroundProperty);
+        }
+
+        DeviceListArea.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+        DevicesView.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
+
+        if (wasOpen && !open)
+        {
+            ApplyListEdits();
+        }
+    }
+
+    // Every paired device, hidden ones too, in the order they're listed.
+    private List<DeviceListEntry> EntriesToEdit() =>
+        DevicesPanel.Children.Cast<UIElement>()
+            .Where(row => row is HeadphoneRow || _hasAirPods)
+            .Select(row => new DeviceListEntry(
+                OrderKeyOf(row),
+                row is HeadphoneRow headphones ? headphones.Title : _airPodsName ?? PairedAudioDevices.AirPodsName,
+                !IsHidden(OrderKeyOf(row))))
+            .ToList();
+
+    // Devices that were unpaired while the list was open keep their saved place and stay hidden if they were.
+    private void ApplyListEdits()
+    {
+        var entries = DeviceListView.Entries;
+        var keys = entries.Select(entry => entry.Key).ToList();
+
+        _settings.DeviceOrder = DeviceOrder.Merge(_settings.DeviceOrder, keys);
+        _settings.HiddenDevices = _settings.HiddenDevices
+            .Where(key => !keys.Contains(key, StringComparer.OrdinalIgnoreCase))
+            .Concat(entries.Where(entry => !entry.Shown).Select(entry => entry.Key))
+            .ToList();
+        _settings.Save();
+
+        ShowOnlyUnhidden();
+        ArrangeRows();
+        SizeToDevices();
     }
 
     private double TopOf(UIElement row) => row.TranslatePoint(new Point(0, 0), DevicesPanel).Y;
@@ -559,7 +638,7 @@ public partial class MainWindow : Window
     {
         double defaultHeight;
 
-        if (NoDevicesPanel.Visibility == Visibility.Visible)
+        if (NoDevicesPanel.Visibility == Visibility.Visible || AllHiddenPanel.Visibility == Visibility.Visible)
         {
             _smallestHeight = _allDevicesHeight = defaultHeight = NoDevicesHeight + UpdateBarHeight;
         }
@@ -747,6 +826,7 @@ public partial class MainWindow : Window
         }
 
         ShowAppSettings(false);
+        ShowListEditor(false);
         DevicesView.Visibility = Visibility.Collapsed;
         ReleaseNotesArea.Visibility = Visibility.Visible;
         ReleaseNotesVersion.Text = "Loading...";
@@ -789,6 +869,7 @@ public partial class MainWindow : Window
         ReleaseNotesArea.Visibility = Visibility.Collapsed;
         if (open)
         {
+            ShowListEditor(false);
             AppSettingsView.Show(_settings);
             AppSettingsArea.ScrollToTop();
             SettingsButton.SetResourceReference(BackgroundProperty, "AccentFillColorDefaultBrush");

@@ -36,6 +36,12 @@ public sealed class AppSettings
     /// </summary>
     public List<string> DeviceOrder { get; set; } = [];
 
+    /// <summary>
+    /// The devices the user chose not to show in the app, by the same keys as <see cref="DeviceOrder"/>. They stay paired
+    /// in Windows. A hidden device that isn't paired right now stays hidden, for when it's paired again.
+    /// </summary>
+    public List<string> HiddenDevices { get; set; } = [];
+
     /// <summary>Low battery settings for other headphones, by their Windows name.</summary>
     public Dictionary<string, DeviceLowBattery> DeviceLowBattery { get; set; } = [];
 

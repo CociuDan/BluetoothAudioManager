@@ -106,6 +106,7 @@ public partial class HeadphoneRow : UserControl, IDisposable
     /// </summary>
     public string Title
     {
+        get => _title;
         set
         {
             if (value == _title)
