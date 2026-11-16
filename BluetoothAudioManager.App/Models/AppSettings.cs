@@ -42,6 +42,12 @@ public sealed class AppSettings
     /// </summary>
     public List<string> HiddenDevices { get; set; } = [];
 
+    /// <summary>
+    /// Each device's volume, by the same keys as <see cref="DeviceOrder"/>, so its slider still shows and changes it while
+    /// the device is disconnected.
+    /// </summary>
+    public Dictionary<string, SavedVolume> DeviceVolumes { get; set; } = [];
+
     /// <summary>Low battery settings for other headphones, by their Windows name.</summary>
     public Dictionary<string, DeviceLowBattery> DeviceLowBattery { get; set; } = [];
 

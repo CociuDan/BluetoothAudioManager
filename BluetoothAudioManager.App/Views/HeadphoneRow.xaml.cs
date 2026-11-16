@@ -69,7 +69,7 @@ public partial class HeadphoneRow : UserControl, IDisposable
         _batteryTimer.Tick += (_, _) => RefreshBattery();
 
         Header.Follow(_connection);
-        VolumeControl.Follow(new DeviceVolume(_connection.Matches), title);
+        VolumeControl.Follow(new DeviceVolume(_connection.Matches), title, _settings, DeviceName);
         _batteryTimer.Start();
     }
 
@@ -142,6 +142,7 @@ public partial class HeadphoneRow : UserControl, IDisposable
     public void ShowSettings(bool open)
     {
         BatterySetting.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+        VolumeControl.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
         ShowPictures(!open);
         Header.SettingsOpen = open;
     }

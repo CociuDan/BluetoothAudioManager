@@ -37,7 +37,8 @@
                        ToolTip="Case" AutomationProperties.Name="Case" />
                 <local:BatteryBadge x:Name="EarbudsBadge" Grid.Row="1" Grid.ColumnSpan="2" Visibility="Hidden" />
             </Grid>
-            <local:LowBatterySetting x:Name="BatterySetting" Height="130" Margin="22,0,0,0" Visibility="Collapsed" />
+            <!-- Takes the place of the volume slider (30 high, with 12 below) and the pictures (130), so the row keeps its height. -->
+            <local:LowBatterySetting x:Name="BatterySetting" Height="172" Margin="22,0,0,0" Visibility="Collapsed" />
         </StackPanel>
     </Border>
 </UserControl>

@@ -245,8 +245,8 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- The same height as the pictures it replaces, so nothing else moves. -->
-                <StackPanel x:Name="SettingsPanel" Visibility="Collapsed" Height="130" Margin="22,0,0,0">
+                <!-- The same height as the volume slider (30, with 12 below) and the pictures (130) it replaces, so nothing else moves. -->
+                <StackPanel x:Name="SettingsPanel" Visibility="Collapsed" Height="172" Margin="22,0,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />

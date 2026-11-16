@@ -175,7 +175,7 @@ public partial class MainWindow : Window
     {
         StartScanning();
         AirPodsHeader.Follow(_airPodsConnection);
-        AirPodsVolume.Follow(new DeviceVolume(_airPodsConnection.Matches), PairedAudioDevices.AirPodsName);
+        AirPodsVolume.Follow(new DeviceVolume(_airPodsConnection.Matches), PairedAudioDevices.AirPodsName, _settings, AirPodsOrderKey);
         RefreshDevices();
         WatchOutput();
         StartJabra();
@@ -694,6 +694,7 @@ public partial class MainWindow : Window
     {
         SettingsPanel.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
         AirPodsParts.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
+        AirPodsVolume.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
         AirPodsHeader.SettingsOpen = open;
     }
 
